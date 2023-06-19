@@ -6,6 +6,14 @@
 {-# HLINT ignore "Use <$>" #-}
 {-# HLINT ignore "Use shows" #-}
 {-# HLINT ignore "Replace case with maybe" #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# HLINT ignore "Use camelCase" #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# HLINT ignore "Avoid lambda" #-}
+{-# HLINT ignore "Use const" #-}
+{-# HLINT ignore "Use id" #-}
+{-# HLINT ignore "Use concatMap" #-}
+{-# HLINT ignore "Use putStr" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
@@ -230,6 +238,14 @@ sexp2list sexp = s2l' sexp []
 s2t :: Sexp -> Ltype
 s2t (Ssym "Int") = Lint
 -- ¡¡COMPLÉTER ICI!!
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+s2t (Scons (Scons ses (Ssym "->")) t2) =
+    foldr (\ se -> Larw (s2t se)) (s2t t2) (sexp2list ses)
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
 s2t se = error ("Type Psil inconnu: " ++ (showSexp se))
 
 s2l :: Sexp -> Lexp
@@ -244,10 +260,17 @@ s2l (se@(Scons _ _)) =
         -- Annotation de type
         [Ssym ":", e, t] -> Lhastype (s2l e) (s2t t)
         -- Fonction lambda
-        [Ssym "fun", Ssym x, e] -> Lfun x (s2l e)
+        [Ssym "fun", Ssym x, e] -> Lfun x  (s2l e)
         -- Let
         [Ssym "let", (Scons Snil (Scons (Scons Snil (Ssym x)) e1)), e2]
             -> Llet x (s2l e1) (s2l e2)
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+        -- [Ssym "macro",Scons (Scons (Scons Snil (Ssym "fun")) (Ssym arg)) body]
+        --     -> Lfun arg (s2l body)
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
         -- Autres cas syntaxiquement invalides de :, fun et let
         Ssym h : _ | h `elem` [":", "fun", "let"] ->
                         error ("Arguments invalides pour `"
@@ -257,12 +280,27 @@ s2l (se@(Scons _ _)) =
         -- Erreurs de syntaxe
         [] -> error "Impossible"
 -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 s2l se = error ("Expression Psil inconnue: " ++ (showSexp se))
 
 s2d :: Sexp -> Ldec
-s2d (Scons (Scons (Scons Snil (Ssym "def")) (Ssym v)) e) = Ldef v (s2l e)
+-- s2d (Scons (Scons (Scons Snil (Ssym "def")) (Ssym v)) e) = Ldef v (s2l e)
 -- ¡¡COMPLÉTER ICI!!
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+s2d (sexp@(Scons _ _)) =
+    case sexp2list sexp of
+        -- Définition
+        [Ssym "def", Ssym v, e] -> Ldef v (s2l e)
+        -- Déclaration
+        [Ssym "dec", Ssym v, t] -> Ldec v (s2t t)
+        -- Erreurs de syntaxe
+        h : _ -> error ("N'introduit pas une déclaration: " ++ showSexp h)
+        [] -> error "Impossible"
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 s2d se = error ("Déclaration Psil inconnue: " ++ showSexp se)
 
 ---------------------------------------------------------------------------
@@ -296,6 +334,16 @@ tenv0 = [("+", Larw Lint (Larw Lint Lint)),
 -- `check Γ e τ` vérifie que `e` a type `τ` dans le contexte `Γ`.
 check :: TEnv -> Lexp -> Ltype -> Maybe TypeError
 -- ¡¡COMPLÉTER ICI!!
+---------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+---------------------------------------------------------------------------
+check tenv (Lfun x e) (Larw t1 t2) =
+    check (minsert tenv x t1) e t2
+check _ (Lfun _ _) t =
+    error ("Type invalide pour Lfun (n'est pas de la forme t1->t2): " ++ show t)
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
   -- type attendu.
@@ -313,9 +361,9 @@ synth tenv (Lhastype e t) =
       Nothing -> t
       Just err -> error err
 -- ¡¡COMPLÉTER ICI!!
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
+---------------------------------------------------------------------------
+-- Partie prise du document e2023-soln.hs
+---------------------------------------------------------------------------
 synth tenv (Lapp e1 e2) =
     case synth tenv e1 of
       Larw t1 t2 ->
@@ -327,9 +375,8 @@ synth tenv (Llet x e1 e2) =
     let t1 = synth tenv e1
         tenv' = minsert tenv x t1
     in synth tenv' e2
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
 
         
@@ -400,7 +447,27 @@ process_decl ((tenv, venv), Nothing, res) (Ldef x e) =
         venv' = minsert venv x val
     in ((tenv', venv'), Nothing, (val, ltype) : res)
 -- ¡¡COMPLÉTER ICI!!
-
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+process_decl ((tenv, venv), Just (x',ltype), res) (Ldef x e) =
+    if x' /= x then
+        process_decl ((tenv, venv), Nothing,
+                      error ("Manque une définition pour: " ++ x') : res)
+                     (Ldef x e)
+    else
+        -- Le programmeur a fourni une annotation de type pour `x`.
+        let tenv' = minsert tenv x ltype
+        in case check tenv' e ltype of
+             Nothing ->
+                 -- `venv'` et `val` sont mutuellement récursifs parce que
+                 -- `e` peut être récursif (i.e. faire référence à `x`).
+                 let venv' = minsert venv x val
+                     val = eval venv' e
+                 in ((tenv', venv'), Nothing, (val, ltype) : res)
+             Just err -> ((tenv', venv), Nothing, error err : res)
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 ---------------------------------------------------------------------------
 -- Toplevel                                                              --
 ---------------------------------------------------------------------------

@@ -1,0 +1,3 @@
+; semblable a un des exemples
+(dec f (Int -> Int))
+(def f (fun y (+ y 5)))                 ; ↝ <fonction> : Int -> Int

@@ -1,0 +1,32 @@
+-- Type des valeurs renvoyées par l'évaluateur.
+data Value = Vnum Int
+           | Vfun VEnv Var Lexp
+           | Vop (Value -> Value)
+
+type VEnv = Map Var Value
+
+---------------------------------------------------------------------------
+-- Représentation intermédiaire "Lambda"                                 --
+---------------------------------------------------------------------------
+
+type Var = String
+
+-- Type Haskell qui décrit les types Psil.
+data Ltype = Lint
+           | Larw Ltype Ltype   -- Type "arrow" des fonctions.
+           deriving (Show, Eq)
+
+-- Type Haskell qui décrit les expressions Psil.
+data Lexp = Lnum Int            -- Constante entière.
+          | Lvar Var            -- Référence à une variable.
+          | Lhastype Lexp Ltype -- Annotation de type.
+          | Lapp Lexp Lexp      -- Appel de fonction, avec un argument.
+          | Llet Var Lexp Lexp  -- Déclaration de variable locale.
+          | Lfun Var Lexp       -- Fonction anonyme.
+          deriving (Show, Eq)
+
+-- Type Haskell qui décrit les déclarations Psil.
+data Ldec = Ldec Var Ltype      -- Déclaration globale.
+          | Ldef Var Lexp       -- Définition globale.
+          deriving (Show, Eq)
+
