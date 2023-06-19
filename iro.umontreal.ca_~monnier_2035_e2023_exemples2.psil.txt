@@ -1,0 +1,128 @@
+;;; Quelques exemples.                 -*- mode: lisp-data; coding: utf-8 -*-
+
+(def r1 2)                                       ; ↝ 2 : Int
+(def r2 +)                                       ; ↝ <fonction> : Int -> Int -> Int
+(def r3 (+ 2))                                   ; ↝ <fonction> : Int -> Int
+
+(def r4 (+ (: 2 Int)))                           ; ↝ <fonction> : Int -> Int
+
+(def r5 ((+ 2) 4))                               ; ↝ 6 : Int
+
+(dec r6 Int)
+(def r6 (+ 2 5))                                 ; ↝ 7 : Int
+
+(def r7 (let ((x 5)) (* x 4)))                   ; ↝ 20 : Int
+
+(dec f1 (Int Int -> Int))
+(def f1 (fun x (fun y (+ y 5))))                 ; ↝ <fonction> : Int -> Int -> Int
+
+(dec recursive Int)
+(def recursive (f1 recursive 37))                ; ↝ 42 : Int
+
+;; Une macro triviale.
+(def macro-id (macro (fun s s)))
+(def cinq (macro-id 5))
+
+;; On peut donner un nouveau nom aux formes spéciales comme `fun`:
+(def myfun1 fun)
+(def r8 (: (myfun1 x (+ x 1)) (Int -> Int)))
+
+;; Macro moins triviale: `fun` avec arguments inversés!
+(def revfun
+     (macro (fun body (moremacro
+                      (fun arg (cons (cons 'fun arg) body))))))
+
+(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+(def r10 (r9 6))                                 ; ↝ 13 : Int
+
+;; Utiliser `macro` + `fun` + `moremacro` pour recevoir les différents
+;; arguments, c'est fatigant.  Définissons une macro
+;; (multi-macro ARGS BODY) qui fait ça pour nous.
+(def multi-macro
+     (macro (fun args
+                 (moremacro
+                  (fun body
+                       (let ((head (car args)))
+                         (let ((tail (cdr args)))
+                           (let ((tailfun (cons (cons 'fun tail) body)))
+                             (if (nil? head)
+                                 (cons 'macro tailfun)
+                               (cons (cons 'multi-macro head)
+                                     (cons 'moremacro tailfun)))))))))))
+
+;; Une autre manière de (re)définir une macro équivalente à `fun`.
+(def myfun3 (multi-macro (arg body) (cons (cons 'fun arg) body)))
+(def r11 (: (myfun3 x (+ x 3)) (Int -> Int)))
+(def r12 (r11 2))
+
+;; Tant qu'à y être définissons la macro `defmacro`.
+;; Notons que c'est une macro qui s'utilise au niveau des déclarations
+;; et non des expressions, mais les macros Psil ne sont pas regardantes.
+(def defmacro (multi-macro (name args body)
+                           (cons (cons 'def name)
+                                 (cons (cons 'multi-macro args) body))))
+
+;; Un `λ` à plusieurs arguments (curried).
+(defmacro λ (args body) !!COMPLÉTER!!)
+
+(dec plus (Int Int -> Int))
+(def plus (λ (x y) (+ x y)))
+(def r13 (plus 5 9))
+
+;; On pourrait redéfinir `let` pour qu'il accepte plusieurs déclarations
+;; par macroexpansion plutôt que de le définir directement dans le code Haskell.
+;; Pour commencer, il faudrait sauvegarder le `let` original sous un autre nom
+;; pour pouvoir l'utiliser dans l'expansion du nouveau `let`.
+;;(def let1 let)
+;;(defmacro let (decls body)
+;;  (if (cons? decls)
+;;      (cons (cons 'let (car decls))
+;;            (cons (cons 'let1 (cons nil (cdr decls))) body))
+;;    body))
+
+(def r14 (let ((x 4)
+               (y (+ x 6))
+               (z (* x y)))
+           (+ z x)))
+
+(dec not (Bool -> Bool))
+(def not (λ (x) (if x false true)))
+
+(defmacro and (e1 e2)
+  (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
+
+(def r15 (and true true))
+(def r16 (and true false))
+
+;; Bon, assez souffert, définissons une version minimale de backquote.
+(defmacro shorthand-backquote (e)
+  (if (not (cons? e))
+      (cons (cons nil 'shorthand-quote) e)
+    (let ((head (car e))
+          (tail (cdr e)))
+      ;; Essayons de reconnaître le cas où `e` est de la forme `,tail`
+      ;; i.e. `(shorthand-comma tail)` qu'on peut aussi écrire
+      ;; `((() . shorthand-comma) . tail)`.
+      (if (and (and (cons? head) (nil? (car head)))
+               (and (sym? (cdr head))
+                    (str-eq? (sym-name (cdr head))
+                             ;; Psil n'a pas de encore de chaînes litérales.
+                             (sym-name 'shorthand-comma))))
+          ;; `e` est de la forme `,tail`
+          tail
+        (cons (cons 'cons (cons 'shorthand-backquote head))
+              (cons 'shorthand-backquote tail))))))
+
+;; Vérifions sur une donnée "simple".
+(def r17 `(1 2 ,(num (+ 3 4)) 5))
+
+;; Maintenant, utilisons le backquote pour définir `or`:
+(defmacro or (e1 e2)
+  ;; C'est pas mal plus lisible que la définition de `and`.
+  `(: (if ,e1 true ,e2) Bool))
+
+;; Tests.
+(def r17 (or true false))
+(def r18 (or false false))
+
+(def r19 (let ((f (: (fun x (+ x 3)) (Int -> Int)))) f 6))
