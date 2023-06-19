@@ -1,5 +1,7 @@
 -- TP-1  --- Implantation d'une sorte de Lisp          -*- coding: utf-8 -*-
 {-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
