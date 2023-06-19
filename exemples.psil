@@ -1,0 +1,20 @@
+;;; Quelques exemples.                 -*- mode: lisp-data; coding: utf-8 -*-
+
+(def r1 2)                                       ; ↝ 2 : Int
+(def r2 +)                                       ; ↝ <fonction> : Int -> Int -> Int
+(def r3 (+ 2))                                   ; ↝ <fonction> : Int -> Int
+
+(def r4 (+ (: 2 Int)))                           ; ↝ <fonction> : Int -> Int
+
+(def r5 ((+ 2) 4))                               ; ↝ 6 : Int
+
+(dec r6 Int)
+(def r6 (+ 2 5))                                 ; ↝ 7 : Int
+
+(def r7 (let ((x 5)) (* x 4)))                   ; ↝ 20 : Int
+
+(dec f1 (Int Int -> Int))
+(def f1 (fun x (fun y (+ y 5))))                 ; ↝ <fonction> : Int -> Int -> Int
+
+(dec recursive Int)
+(def recursive (f1 recursive 37))                ; ↝ 42 : Int

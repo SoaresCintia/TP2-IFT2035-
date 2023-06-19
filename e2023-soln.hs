@@ -226,7 +226,7 @@ s2t se = error ("Type Psil inconnu: " ++ (showSexp se))
 s2l :: Sexp -> Lexp
 s2l (Snum n) = Lnum n
 s2l (Ssym s) = Lvar s
-s2l (se @ (Scons _ _)) =
+s2l (se@(Scons _ _)) =
     case sexp2list se of
         -- Annotation de type
         [Ssym ":", e, t] -> Lhastype (s2l e) (s2t t)
@@ -246,7 +246,7 @@ s2l (se @ (Scons _ _)) =
 s2l se = error ("Expression Psil inconnue: " ++ (showSexp se))
 
 s2d :: Sexp -> Ldec
-s2d (sexp @ (Scons _ _)) =
+s2d (sexp@(Scons _ _)) =
     case sexp2list sexp of
         -- Définition
         [Ssym "def", Ssym v, e] -> Ldef v (s2l e)
@@ -381,7 +381,7 @@ type EState = ((TEnv, VEnv),       -- Contextes de typage et d'évaluation.
 -- Évalue une déclaration, y compris vérification des types.
 process_decl :: EState -> Ldec -> EState
 process_decl (env, Nothing, res) (Ldec x t) = (env, Just (x,t), res)
-process_decl (env, Just (x', _), res) (decl @ (Ldec _ _)) =
+process_decl (env, Just (x', _), res) (decl@(Ldec _ _)) =
     process_decl (env, Nothing,
                   error ("Manque une définition pour: " ++ x') : res)
                  decl

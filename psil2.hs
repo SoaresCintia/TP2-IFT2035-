@@ -5,6 +5,7 @@
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
 {-# HLINT ignore "Use <$>" #-}
 {-# HLINT ignore "Use shows" #-}
+{-# HLINT ignore "Replace case with maybe" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
@@ -216,6 +217,16 @@ data Ldec = Ldec Var Ltype      -- Déclaration globale.
 
 -- Conversion de Sexp à Lambda --------------------------------------------
 
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+sexp2list :: Sexp -> [Sexp]
+sexp2list sexp = s2l' sexp []
+    where s2l' Snil res = res
+          s2l' (Scons ses se) res = s2l' ses (se : res)
+          s2l' se _ = error ("Liste inconnue: " ++ showSexp se)
+-------------------------------------------------------------------------------
+
 s2t :: Sexp -> Ltype
 s2t (Ssym "Int") = Lint
 -- ¡¡COMPLÉTER ICI!!
@@ -225,6 +236,28 @@ s2l :: Sexp -> Lexp
 s2l (Snum n) = Lnum n
 s2l (Ssym s) = Lvar s
 -- ¡¡COMPLÉTER ICI!!
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+s2l (se@(Scons _ _)) =
+    case sexp2list se of
+        -- Annotation de type
+        [Ssym ":", e, t] -> Lhastype (s2l e) (s2t t)
+        -- Fonction lambda
+        [Ssym "fun", Ssym x, e] -> Lfun x (s2l e)
+        -- Let
+        [Ssym "let", (Scons Snil (Scons (Scons Snil (Ssym x)) e1)), e2]
+            -> Llet x (s2l e1) (s2l e2)
+        -- Autres cas syntaxiquement invalides de :, fun et let
+        Ssym h : _ | h `elem` [":", "fun", "let"] ->
+                        error ("Arguments invalides pour `"
+                                ++ h ++ "`: " ++ showSexp se)
+        -- Appels
+        h : ses -> foldl (\ le arg -> Lapp le (s2l arg)) (s2l h) ses
+        -- Erreurs de syntaxe
+        [] -> error "Impossible"
+-------------------------------------------------------------------------------
+
 s2l se = error ("Expression Psil inconnue: " ++ (showSexp se))
 
 s2d :: Sexp -> Ldec
@@ -280,6 +313,23 @@ synth tenv (Lhastype e t) =
       Nothing -> t
       Just err -> error err
 -- ¡¡COMPLÉTER ICI!!
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+synth tenv (Lapp e1 e2) =
+    case synth tenv e1 of
+      Larw t1 t2 ->
+          case check tenv e2 t1 of
+            Nothing -> t2
+            Just err -> error err
+      _ -> error ("Not a function: " ++ show e1)
+synth tenv (Llet x e1 e2) =
+    let t1 = synth tenv e1
+        tenv' = minsert tenv x t1
+    in synth tenv' e2
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
 
         
@@ -315,7 +365,20 @@ eval :: VEnv -> Lexp -> Value
 eval _venv (Lnum n) = Vnum n
 eval venv (Lvar x) = mlookup venv x
 -- ¡¡COMPLÉTER ICI!!
-
+-------------------------------------------------------------------------------
+-- Fonction prise du document e2023-soln.hs
+-------------------------------------------------------------------------------
+eval venv (Lhastype e _) = eval venv e
+eval venv (Lapp e1 e2) =
+    let argValue = eval venv e2
+    in case eval venv e1 of
+        Vop f -> f argValue
+        Vfun fenv param body -> eval (minsert fenv param argValue) body
+        other -> error ("Trying to call a non-function: " ++ show other)
+eval venv (Llet x e1 e2) = eval (minsert venv x (eval venv e1)) e2
+eval venv (Lfun x e) = Vfun venv x e
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 -- État de l'évaluateur.
 type EState = ((TEnv, VEnv),       -- Contextes de typage et d'évaluation.
