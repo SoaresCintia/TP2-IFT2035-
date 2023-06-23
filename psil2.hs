@@ -1,19 +1,9 @@
 -- TP-1  --- Implantation d'une sorte de Lisp          -*- coding: utf-8 -*-
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Redundant bracket" #-}
-{-# HLINT ignore "Avoid lambda using `infix`" #-}
-{-# HLINT ignore "Use <$>" #-}
-{-# HLINT ignore "Use shows" #-}
-{-# HLINT ignore "Replace case with maybe" #-}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# HLINT ignore "Use camelCase" #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# HLINT ignore "Avoid lambda" #-}
-{-# HLINT ignore "Use const" #-}
-{-# HLINT ignore "Use id" #-}
-{-# HLINT ignore "Use concatMap" #-}
-{-# HLINT ignore "Use putStr" #-}
+{-# HLINT ignore "Redundant bracket" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
@@ -197,16 +187,55 @@ readSexp = read
 showSexp :: Sexp -> String
 showSexp e = showSexp' e ""
 
+
+---------------------------------------------------------------------------
+-- Tables associatives simples                                           --
+---------------------------------------------------------------------------
+
+-- Type des tables indexées par des `α` qui contiennent des `β`.
+-- Il y a de bien meilleurs choix qu'une liste de paires, mais
+-- ça suffit pour notre prototype.
+type Map α β = [(α, β)]
+
+-- Recherche dans une table.
+mmlookup :: Map Var β -> Var -> Maybe β
+mmlookup [] _ = Nothing
+mmlookup ((x,v) : xs) x' = if x == x' then Just v else mmlookup xs x'
+
+mlookup :: Map Var β -> Var -> β
+mlookup m x = case mmlookup m x of
+                Just v -> v
+                _ -> error ("Uknown variable: " ++ show x)
+                           
+minsert :: Map Var β -> Var -> β -> Map Var β
+minsert m x v = (x,v) : m
+
 ---------------------------------------------------------------------------
 -- Représentation intermédiaire "Lambda"                                 --
 ---------------------------------------------------------------------------
 
 type Var = String
+type PrimType = String
 
 -- Type Haskell qui décrit les types Psil.
-data Ltype = Lint
-           | Larw Ltype Ltype   -- Type "arrow" des fonctions.
+data Ltype = Tprim PrimType
+           | Tarw Ltype Ltype   -- Type "arrow" des fonctions.
            deriving (Show, Eq)
+
+-- On défini un type séparé pour pouvoir lui donner une instance de `Show`
+-- manuellement (`deriving` ne fonctionne pas avec les fonctions),
+-- pour que `deriving` fonctionne lors de la définition de `Lexp`.
+data Lelab = Lelab (Sexp -> Lexp)
+instance Show Lelab where
+    showsPrec _p _ = showString "<elabfun>"
+data Delab = Delab (Sexp -> Ldec)
+instance Show Delab where
+    showsPrec _p _ = showString "<elabfun>"
+
+-- Lpending et Dpending sont utilisés pour implanter le "currying":
+-- lorsqu'on élabore une Sexp de la forme (Scons s1 s2), si `s1`
+-- n'a pas assez d'arguments, l'élaboration renvoie un `Lpending`
+-- (ou `Dpending`) auquel on peut alors passer `s2`.
 
 -- Type Haskell qui décrit les expressions Psil.
 data Lexp = Lnum Int            -- Constante entière.
@@ -215,135 +244,138 @@ data Lexp = Lnum Int            -- Constante entière.
           | Lapp Lexp Lexp      -- Appel de fonction, avec un argument.
           | Llet Var Lexp Lexp  -- Déclaration de variable locale.
           | Lfun Var Lexp       -- Fonction anonyme.
-          deriving (Show, Eq)
+          | Lif Lexp Lexp Lexp  -- Expression conditionnelle.
+          | Lquote Value        -- Une Sexp immédiate.
+          | Lpending Lelab      -- Nœud interne utilisé pendant l'élaboration.
+          deriving (Show)
 
 -- Type Haskell qui décrit les déclarations Psil.
-data Ldec = Ldec Var Ltype      -- Déclaration globale.
-          | Ldef Var Lexp       -- Définition globale.
-          deriving (Show, Eq)
-          
+data Ldec = Ddec Var Ltype      -- Déclaration globale.
+          | Ddef Var Lexp       -- Définition globale.
+          | Dpending Delab      -- Nœud interne utilisé pendant l'élaboration.
+          deriving (Show)
 
--- Conversion de Sexp à Lambda --------------------------------------------
+-- Converti une Sexp Haskell en une Sexp Psil.
+h2p_sexp :: Sexp -> Value
+h2p_sexp (Snum n) = Vobj "num" [Vnum n]
+h2p_sexp Snil = p_nil
+h2p_sexp (Ssym s) = Vobj "sym" [Vstr s]
+h2p_sexp (Scons s1 s2) = p_cons (h2p_sexp s1) (h2p_sexp s2)
 
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
+-- Converti une Sexp Psil en une Sexp Haskell.
+p2h_sexp :: Value -> Sexp
+p2h_sexp (Vobj "num" [Vnum n]) = Snum n
+p2h_sexp (Vobj "nil" []) = Snil
+p2h_sexp (Vobj "sym" [Vstr s]) = Ssym s
+p2h_sexp (Vobj "cons" [v1, v2]) = Scons (p2h_sexp v1) (p2h_sexp v2)
+p2h_sexp (Vobj "moremacro" _) = error "moremacro inattendu"
+p2h_sexp v = error ("Pas une Sexp: " ++ show v)
+                    
+---------------------------------------------------------------------------
+-- Conversion de Sexp à Lambda                                           --
+---------------------------------------------------------------------------
+-- On appelle aussi cette phase l'*élaboration*.
+
 sexp2list :: Sexp -> [Sexp]
 sexp2list sexp = s2l' sexp []
     where s2l' Snil res = res
           s2l' (Scons ses se) res = s2l' ses (se : res)
           s2l' se _ = error ("Liste inconnue: " ++ showSexp se)
--------------------------------------------------------------------------------
 
 s2t :: Sexp -> Ltype
-s2t (Ssym "Int") = Lint
--- ¡¡COMPLÉTER ICI!!
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
+s2t (Ssym pt) = Tprim pt
 s2t (Scons (Scons ses (Ssym "->")) t2) =
-    foldr (\ se -> Larw (s2t se)) (s2t t2) (sexp2list ses)
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-
+    foldr (\ se -> Tarw (s2t se)) (s2t t2) (sexp2list ses)
 s2t se = error ("Type Psil inconnu: " ++ (showSexp se))
 
-s2l :: Sexp -> Lexp
-s2l (Snum n) = Lnum n
-s2l (Ssym s) = Lvar s
--- ¡¡COMPLÉTER ICI!!
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
-s2l (se@(Scons _ _)) =
-    case sexp2list se of
-        -- Annotation de type
-        [Ssym ":", e, t] -> Lhastype (s2l e) (s2t t)
-        -- Fonction lambda
-        [Ssym "fun", Ssym x, e] -> Lfun x  (s2l e)
-        -- Let
-        [Ssym "let", (Scons Snil (Scons (Scons Snil (Ssym x)) e1)), e2]
-            -> Llet x (s2l e1) (s2l e2)
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-        -- [Ssym "macro",Scons (Scons (Scons Snil (Ssym "fun")) (Ssym arg)) body]
-        --     -> Lfun arg (s2l body)
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
-        -- Autres cas syntaxiquement invalides de :, fun et let
-        Ssym h : _ | h `elem` [":", "fun", "let"] ->
-                        error ("Arguments invalides pour `"
-                                ++ h ++ "`: " ++ showSexp se)
-        -- Appels
-        h : ses -> foldl (\ le arg -> Lapp le (s2l arg)) (s2l h) ses
-        -- Erreurs de syntaxe
-        [] -> error "Impossible"
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
 
-s2l se = error ("Expression Psil inconnue: " ++ (showSexp se))
+-- Définitions des différentes formes spéciales.
 
-s2d :: Sexp -> Ldec
--- s2d (Scons (Scons (Scons Snil (Ssym "def")) (Ssym v)) e) = Ldef v (s2l e)
--- ¡¡COMPLÉTER ICI!!
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
-s2d (sexp@(Scons _ _)) =
-    case sexp2list sexp of
-        -- Définition
-        [Ssym "def", Ssym v, e] -> Ldef v (s2l e)
-        -- Déclaration
-        [Ssym "dec", Ssym v, t] -> Ldec v (s2t t)
-        -- Erreurs de syntaxe
-        h : _ -> error ("N'introduit pas une déclaration: " ++ showSexp h)
-        [] -> error "Impossible"
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-s2d se = error ("Déclaration Psil inconnue: " ++ showSexp se)
+sf_colon :: SpecialForm
+sf_colon venv se =
+    Lpending (Lelab (\ st -> Lhastype (s2l venv se) (s2t st)))
+
+sf_fun :: SpecialForm
+sf_fun venv (Ssym x) =
+    Lpending (Lelab (\ e -> Lfun x (s2l venv e)))
+sf_fun _ x = error ("devrait être un identifiant: " ++ showSexp x)
+
+sf_if :: SpecialForm
+sf_if _venv _sc =  error "¡¡COMPLÉTER!! sf_if"
+
+sf_let :: SpecialForm
+sf_let _venv _decls = error "¡¡COMPLÉTER!! sf_let"
+
+sf_quote :: SpecialForm
+sf_quote _venv s = Lquote (h2p_sexp s)
+
+
+-- Élaboration d'une Sexp qui est en position de "tête", i.e.
+-- dans la partie gauche d'un `Scons`.
+-- C'est nécessaire de gérer ce cas de manière différente pour
+-- distinguer par exemple le cas d'usage de `fun` où on veut définir une
+-- fonction et celui où on veut seulement faire référence à la
+-- forme spéciale pour la stocker dans une autre variable.
+h2l :: VEnv -> Sexp -> Lexp
+h2l venv Snil = Lpending (Lelab (h2l venv))
+h2l venv (s@(Ssym name)) =
+    case mmlookup venv name of
+      Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
+      -- ¡¡COMPLÉTER!!  Just (Vobj "macro" [Vfun macroexpander]) ->
+      _ -> s2l venv s
+h2l venv (Scons s1 s2) =
+    case h2l venv s1 of
+      Lpending (Lelab ef) -> ef s2
+      _ -> Lapp (s2l venv s1) (s2l venv s2)
+h2l venv s = s2l venv s
+
+-- Élaboration d'une Sexp qui n'est pas en position de "tête".
+s2l :: VEnv -> Sexp -> Lexp
+s2l _ (Snum n) = Lnum n
+s2l _ (Ssym s) = Lvar s
+s2l venv (s@(Scons _ _)) =
+    case h2l venv s of
+      Lpending _ -> error ("Argument manquant dans une macro ou forme spéciale")
+      le -> le
+s2l _ se = error ("Expression Psil inconnue: " ++ (showSexp se))
+
+
+-- Élaboration des déclarations.
+s2d :: VEnv -> Sexp -> Ldec
+s2d venv Snil = Dpending (Delab (s2d venv))
+s2d venv (Ssym "def") =
+    Dpending (Delab (\ v ->
+                     case v of
+                       Ssym name ->
+                         Dpending (Delab (\ e -> Ddef name (s2l venv e)))
+                       _ -> error ("Pas un identifiant: " ++ show v)))
+s2d _venv (Ssym "dec") =
+    Dpending (Delab (\ v ->
+                     case v of
+                       Ssym name ->
+                         Dpending (Delab (\ e -> Ddec name (s2t e)))
+                       _ -> error ("Pas un identifiant: " ++ show v)))
+s2d _venv (Ssym _v) = error "¡¡COMPLÉTER!! s2d macros"
+s2d venv (Scons s1 s2) =
+    case s2d venv s1 of
+      Dpending (Delab ef) -> ef s2
+      _ -> error ("Argument en trop: " ++ show s2)
+s2d _ se = error ("Déclaration Psil inconnue: " ++ showSexp se)
 
 ---------------------------------------------------------------------------
 -- Vérification des types                                                --
 ---------------------------------------------------------------------------
 
--- Type des tables indexées par des `α` qui contiennent des `β`.
--- Il y a de bien meilleurs choix qu'une liste de paires, mais
--- ça suffit pour notre prototype.
-type Map α β = [(α, β)]
-
--- Transforme une `Map` en une fonctions (qui est aussi une sorte de "Map").
-mlookup :: Map Var β -> (Var -> β)
-mlookup [] x = error ("Uknown variable: " ++ show x)
-mlookup ((x,v) : xs) x' = if x == x' then v else mlookup xs x'
-
-minsert :: Map Var β -> Var -> β -> Map Var β
-minsert m x v = (x,v) : m
-
 type TEnv = Map Var Ltype
 type TypeError = String
 
--- L'environment de typage initial.
-tenv0 :: TEnv
-tenv0 = [("+", Larw Lint (Larw Lint Lint)),
-         ("-", Larw Lint (Larw Lint Lint)),
-         ("*", Larw Lint (Larw Lint Lint)),
-         ("/", Larw Lint (Larw Lint Lint)),
-         ("if0", Larw Lint (Larw Lint (Larw Lint Lint)))]
-
 -- `check Γ e τ` vérifie que `e` a type `τ` dans le contexte `Γ`.
 check :: TEnv -> Lexp -> Ltype -> Maybe TypeError
--- ¡¡COMPLÉTER ICI!!
----------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
----------------------------------------------------------------------------
-check tenv (Lfun x e) (Larw t1 t2) =
+check tenv (Lfun x e) (Tarw t1 t2) =
     check (minsert tenv x t1) e t2
 check _ (Lfun _ _) t =
     error ("Type invalide pour Lfun (n'est pas de la forme t1->t2): " ++ show t)
----------------------------------------------------------------------------
----------------------------------------------------------------------------
-
+-- ¡¡COMPLÉTER!!
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
   -- type attendu.
@@ -354,30 +386,23 @@ check tenv e t
 -- `synth Γ e` vérifie que `e` est typé correctement et ensuite "synthétise"
 -- et renvoie son type `τ`.
 synth :: TEnv -> Lexp -> Ltype
-synth _    (Lnum _) = Lint
+synth _    (Lnum _) = pt_int
 synth tenv (Lvar v) = mlookup tenv v
 synth tenv (Lhastype e t) =
     case check tenv e t of
       Nothing -> t
       Just err -> error err
--- ¡¡COMPLÉTER ICI!!
----------------------------------------------------------------------------
--- Partie prise du document e2023-soln.hs
----------------------------------------------------------------------------
 synth tenv (Lapp e1 e2) =
     case synth tenv e1 of
-      Larw t1 t2 ->
+      Tarw t1 t2 ->
           case check tenv e2 t1 of
             Nothing -> t2
             Just err -> error err
       _ -> error ("Not a function: " ++ show e1)
-synth tenv (Llet x e1 e2) =
-    let t1 = synth tenv e1
-        tenv' = minsert tenv x t1
-    in synth tenv' e2
----------------------------------------------------------------------------
----------------------------------------------------------------------------
+synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
+-- ¡¡COMPLÉTER!!
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
+
 
         
 ---------------------------------------------------------------------------
@@ -386,46 +411,131 @@ synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
 
 -- Type des valeurs renvoyées par l'évaluateur.
 data Value = Vnum Int
-           | Vfun VEnv Var Lexp
-           | Vop (Value -> Value)
+           | Vstr String
+           | Vfun (Value -> Value)
+           | Vsf String SpecialForm
+           | Vobj String [Value]
 
 type VEnv = Map Var Value
+type SpecialForm = VEnv -> Sexp -> Lexp
 
 instance Show Value where
     showsPrec p  (Vnum n) = showsPrec p n
-    showsPrec _p (Vfun _ _ _) = showString "<fermeture>"
-    showsPrec _p (Vop _) = showString "<fonction>"
+    showsPrec _p (Vstr s) = showString ("\"" ++ s ++ "\"")
+    showsPrec _p (Vfun _) = showString "<Fonction>"
+    showsPrec _p (Vsf name _) = showString ("<FormeSpéciale-" ++ name ++ ">")
+    showsPrec _p (Vobj tag vals) =
+        showString ("<" ++ tag ++ foldr (\ v s -> " " ++ show v ++ s)
+                                        ">" vals)
 
--- L'environnement initial qui contient les fonctions prédéfinies.
+-- Converti une fonction binaire Haskell en une primitive Psil.
+binop :: (Int -> Int -> Int) -> Value
+binop op = Vfun (\ x1 ->
+                 case x1 of
+                   Vnum v1 -> Vfun (\ x2 ->
+                                   case x2 of
+                                     Vnum v2 -> Vnum (v1 `op` v2)
+                                     _ -> error "Erreur de type à l'exécution")
+                   _ -> error "Erreur de type à l'exécution")
+
+pt_int :: Ltype
+pt_int = Tprim "Int"
+pt_sf :: Ltype
+pt_sf  = Tprim "SpecialForm"
+pt_string :: Ltype
+pt_string = Tprim "String"
+
+pt_macro :: Ltype
+pt_macro = Tprim "Macro"
+           
+pt_bool :: Ltype
+pt_bool = Tprim "Bool"
+p_true :: Value
+p_true = Vnum 1
+p_false :: Value
+p_false = Vnum 0
+
+pt_sexp :: Ltype
+pt_sexp = Tprim "Sexp"
+p_nil :: Value
+p_nil = Vobj "nil" []
+p_cons :: Value -> Value -> Value
+p_cons hd tl = Vobj "cons" [hd, tl]
+
+
+---------------------------------------------------------------------------
+-- Environnement initial                                                 --
+---------------------------------------------------------------------------
+
+-- L'environnement initial qui contient les fonctions/constantes prédéfinies.
+env0 :: [(Var, Ltype, Value)]
+env0 =
+    let pt_int_binop = Tarw pt_int (Tarw pt_int pt_int)
+    in [("+", pt_int_binop, binop (+)),
+        ("-", pt_int_binop, binop (-)),
+        ("*", pt_int_binop, binop (*)),
+        ("/", pt_int_binop, binop div),
+        (":",   pt_sf, Vsf ":"   sf_colon),
+        ("let", pt_sf, Vsf "let" sf_let),
+        ("fun", pt_sf, Vsf "fun" sf_fun),
+        -- Le type `Bool`.
+        ("if",  pt_sf, Vsf "if"  sf_if),
+        ("true",  pt_bool, p_true),
+        ("false", pt_bool, p_false),
+        ("zero?", Tarw pt_int pt_bool,
+         Vfun (\ v -> case v of { Vnum 0 -> p_true; _ -> p_false })),
+        -- Let type `Sexp`.
+        ("shorthand-quote", pt_sf, Vsf "quote" sf_quote),
+        ("nil", pt_sexp, p_nil),
+        ("cons", Tarw pt_sexp (Tarw pt_sexp pt_sexp),
+         Vfun (\ v1 -> Vfun (\ v2 -> p_cons v1 v2))),
+        ("cons?", Tarw pt_sexp pt_bool,
+         Vfun (\ v -> case v of { Vobj "cons" _ -> p_true; _ -> p_false })),
+        ("nil?", Tarw pt_sexp pt_bool,
+         Vfun (\ v -> case v of { Vobj "nil" _ -> p_true; _ -> p_false })),
+        ("car", Tarw pt_sexp pt_sexp,
+         Vfun (\ v -> case v of { Vobj "cons" [v1, _v2] -> v1; _ -> p_nil })),
+        ("cdr", Tarw pt_sexp pt_sexp,
+         Vfun (\ v -> case v of { Vobj "cons" [_v1, v2] -> v2; _ -> p_nil })),
+        ("num", Tarw pt_int pt_sexp, Vfun (\ s -> Vobj "num" [s])),
+        ("sym", Tarw pt_string pt_sexp, Vfun (\ s -> Vobj "sym" [s])),
+        ("sym?", Tarw pt_sexp pt_bool,
+         Vfun (\ v -> case v of { Vobj "sym" _ -> p_true; _ -> p_false })),
+        ("sym-name", Tarw pt_sexp pt_string,
+         Vfun (\ v -> case v of
+                       Vobj "sym" [s] -> s
+                       _ -> error "L'argument de sym-name n'est pas un `sym`")),
+        -- Le type String.
+        ("str-eq?", Tarw pt_string (Tarw pt_string pt_bool),
+         Vfun (\ v1 -> Vfun (\ v2 -> case (v1, v2) of
+                                     (Vstr s1, Vstr s2) | s1 == s2 -> p_true
+                                     _ -> p_false))),
+        -- Les macros.
+        ("macro", Tarw (Tarw pt_sexp pt_sexp) pt_macro,
+         Vfun (\expander -> Vobj "macro" [expander])),
+        ("moremacro", Tarw (Tarw pt_sexp pt_sexp) pt_sexp,
+         Vfun (\expander -> Vobj "moremacro" [expander]))]
+
+tenv0 :: TEnv
+tenv0 = map (\ (x,t,_) -> (x,t)) env0
+
 venv0 :: VEnv
-venv0 = [("+", Vop (\ (Vnum x) -> Vop (\ (Vnum y) -> Vnum (x + y)))),
-         ("-", Vop (\ (Vnum x) -> Vop (\ (Vnum y) -> Vnum (x - y)))),
-         ("*", Vop (\ (Vnum x) -> Vop (\ (Vnum y) -> Vnum (x * y)))),
-         ("/", Vop (\ (Vnum x) -> Vop (\ (Vnum y) -> Vnum (x `div` y)))),
-         ("if0", Vop (\ (Vnum x) ->
-                       case x of
-                         0 -> Vop (\ v1 -> Vop (\ _ -> v1))
-                         _ -> Vop (\ _ -> Vop (\ v2 -> v2))))]
+venv0 = map (\ (x,_,v) -> (x,v)) env0
 
 -- La fonction d'évaluation principale.
 eval :: VEnv -> Lexp -> Value
 eval _venv (Lnum n) = Vnum n
 eval venv (Lvar x) = mlookup venv x
--- ¡¡COMPLÉTER ICI!!
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
 eval venv (Lhastype e _) = eval venv e
 eval venv (Lapp e1 e2) =
     let argValue = eval venv e2
     in case eval venv e1 of
-        Vop f -> f argValue
-        Vfun fenv param body -> eval (minsert fenv param argValue) body
+        Vfun f -> f argValue
         other -> error ("Trying to call a non-function: " ++ show other)
 eval venv (Llet x e1 e2) = eval (minsert venv x (eval venv e1)) e2
-eval venv (Lfun x e) = Vfun venv x e
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
+eval venv (Lfun x e) = Vfun (\ v -> eval (minsert venv x v) e)
+eval _ (Lpending e) = error ("Expression incomplète: " ++ show e)
+-- ¡¡COMPLÉTER!!
 
 -- État de l'évaluateur.
 type EState = ((TEnv, VEnv),       -- Contextes de typage et d'évaluation.
@@ -434,27 +544,23 @@ type EState = ((TEnv, VEnv),       -- Contextes de typage et d'évaluation.
 
 -- Évalue une déclaration, y compris vérification des types.
 process_decl :: EState -> Ldec -> EState
-process_decl (env, Nothing, res) (Ldec x t) = (env, Just (x,t), res)
-process_decl (env, Just (x', _), res) (decl@(Ldec _ _)) =
+process_decl (env, Nothing, res) (Ddec x t) = (env, Just (x,t), res)
+process_decl (env, Just (x', _), res) (decl@(Ddec _ _)) =
     process_decl (env, Nothing,
                   error ("Manque une définition pour: " ++ x') : res)
                  decl
-process_decl ((tenv, venv), Nothing, res) (Ldef x e) =
+process_decl ((tenv, venv), Nothing, res) (Ddef x e) =
     -- Le programmeur n'a *pas* fourni d'annotation de type pour `x`.
     let ltype = synth tenv e
         tenv' = minsert tenv x ltype
         val = eval venv e
         venv' = minsert venv x val
     in ((tenv', venv'), Nothing, (val, ltype) : res)
--- ¡¡COMPLÉTER ICI!!
--------------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
--------------------------------------------------------------------------------
-process_decl ((tenv, venv), Just (x',ltype), res) (Ldef x e) =
+process_decl ((tenv, venv), Just (x',ltype), res) (Ddef x e) =
     if x' /= x then
         process_decl ((tenv, venv), Nothing,
                       error ("Manque une définition pour: " ++ x') : res)
-                     (Ldef x e)
+                     (Ddef x e)
     else
         -- Le programmeur a fourni une annotation de type pour `x`.
         let tenv' = minsert tenv x ltype
@@ -466,8 +572,8 @@ process_decl ((tenv, venv), Just (x',ltype), res) (Ldef x e) =
                      val = eval venv' e
                  in ((tenv', venv'), Nothing, (val, ltype) : res)
              Just err -> ((tenv', venv), Nothing, error err : res)
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
+process_decl _ (Dpending _) = error ("Argument manquant dans une déclaration")
+
 ---------------------------------------------------------------------------
 -- Toplevel                                                              --
 ---------------------------------------------------------------------------
@@ -475,7 +581,8 @@ process_decl ((tenv, venv), Just (x',ltype), res) (Ldef x e) =
 process_sexps :: EState -> [Sexp] -> IO ()
 process_sexps _ [] = return ()
 process_sexps es (sexp : sexps) =
-    let decl = s2d sexp
+    let ((_, venv),_,_) = es
+        decl = s2d venv sexp
         (env', pending, res) = process_decl es decl
     in do (hPutStr stdout)
             (concat
@@ -498,7 +605,7 @@ sexpOf :: String -> Sexp
 sexpOf = read
 
 lexpOf :: String -> Lexp
-lexpOf = s2l . sexpOf
+lexpOf = s2l venv0 . sexpOf
 
 typeOf :: String -> Ltype
 typeOf = synth tenv0 . lexpOf

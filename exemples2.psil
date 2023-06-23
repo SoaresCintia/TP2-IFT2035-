@@ -12,7 +12,7 @@
 (def r6 (+ 2 5))                                 ; ↝ 7 : Int
 
 (def r7 (let ((x 5)) (* x 4)))                   ; ↝ 20 : Int
-
+;
 (dec f1 (Int Int -> Int))
 (def f1 (fun x (fun y (+ y 5))))                 ; ↝ <fonction> : Int -> Int -> Int
 
