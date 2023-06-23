@@ -1,20 +1,47 @@
 -- Type des valeurs renvoyées par l'évaluateur.
 data Value = Vnum Int
-           | Vfun VEnv Var Lexp
-           | Vop (Value -> Value)
+           | Vstr String
+           | Vfun (Value -> Value)
+           | Vsf String SpecialForm
+           | Vobj String [Value]
 
 type VEnv = Map Var Value
+type SpecialForm = VEnv -> Sexp -> Lexp
+
+data Sexp = Snil                        -- La liste vide
+          | Scons Sexp Sexp             -- Une paire
+          | Ssym String                 -- Un symbole
+          | Snum Int                    -- Un entier
+          -- Génère automatiquement un pretty-printer et une fonction de
+          -- comparaison structurelle.
+          deriving (Show, Eq)
 
 ---------------------------------------------------------------------------
 -- Représentation intermédiaire "Lambda"                                 --
 ---------------------------------------------------------------------------
 
 type Var = String
+type PrimType = String
 
 -- Type Haskell qui décrit les types Psil.
-data Ltype = Lint
-           | Larw Ltype Ltype   -- Type "arrow" des fonctions.
+data Ltype = Tprim PrimType
+           | Tarw Ltype Ltype   -- Type "arrow" des fonctions.
            deriving (Show, Eq)
+
+-- On défini un type séparé pour pouvoir lui donner une instance de `Show`
+-- manuellement (`deriving` ne fonctionne pas avec les fonctions),
+-- pour que `deriving` fonctionne lors de la définition de `Lexp`.
+data Lelab = Lelab (Sexp -> Lexp)
+instance Show Lelab where
+    showsPrec _p _ = showString "<elabfun>"
+data Delab = Delab (Sexp -> Ldec)
+instance Show Delab where
+    showsPrec _p _ = showString "<elabfun>"
+
+-- Lpending et Dpending sont utilisés pour implanter le "currying":
+-- lorsqu'on élabore une Sexp de la forme (Scons s1 s2), si `s1`
+-- n'a pas assez d'arguments, l'élaboration renvoie un `Lpending`
+-- (ou `Dpending`) auquel on peut alors passer `s2`.
 
 -- Type Haskell qui décrit les expressions Psil.
 data Lexp = Lnum Int            -- Constante entière.
@@ -23,10 +50,13 @@ data Lexp = Lnum Int            -- Constante entière.
           | Lapp Lexp Lexp      -- Appel de fonction, avec un argument.
           | Llet Var Lexp Lexp  -- Déclaration de variable locale.
           | Lfun Var Lexp       -- Fonction anonyme.
-          deriving (Show, Eq)
+          | Lif Lexp Lexp Lexp  -- Expression conditionnelle.
+          | Lquote Value        -- Une Sexp immédiate.
+          | Lpending Lelab      -- Nœud interne utilisé pendant l'élaboration.
+          deriving (Show)
 
 -- Type Haskell qui décrit les déclarations Psil.
-data Ldec = Ldec Var Ltype      -- Déclaration globale.
-          | Ldef Var Lexp       -- Définition globale.
-          deriving (Show, Eq)
-
+data Ldec = Ddec Var Ltype      -- Déclaration globale.
+          | Ddef Var Lexp       -- Définition globale.
+          | Dpending Delab      -- Nœud interne utilisé pendant l'élaboration.
+          deriving (Show)
