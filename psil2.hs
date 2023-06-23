@@ -4,6 +4,7 @@
 {-# HLINT ignore "Use camelCase" #-}
 {-# HLINT ignore "Avoid lambda" #-}
 {-# HLINT ignore "Redundant bracket" #-}
+{-# HLINT ignore "Use lambda-case" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
