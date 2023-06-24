@@ -6,6 +6,10 @@
 {-# HLINT ignore "Redundant bracket" #-}
 {-# HLINT ignore "Use lambda-case" #-}
 {-# HLINT ignore "Replace case with maybe" #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# HLINT ignore "Use putStr" #-}
+{-# HLINT ignore "Use concatMap" #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
@@ -309,8 +313,8 @@ sf_let :: SpecialForm
 sf_let venv (Scons Snil (Scons (Scons Snil (Ssym x)) e1)) = --error "¡¡COMPLÉTER!! sf_let"
      Lpending (Lelab (\ e2 -> Llet x (s2l venv e1) (s2l venv e2) ))
 -- sexpOf "((x 5))"
---Scons (Scons Snil (Ssym "x")) (Snum 5)
 --Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 5))
+
 sf_quote :: SpecialForm
 sf_quote _venv s = Lquote (h2p_sexp s)
 
@@ -327,6 +331,28 @@ h2l venv (s@(Ssym name)) =
     case mmlookup venv name of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
       -- ¡¡COMPLÉTER!!  Just (Vobj "macro" [Vfun macroexpander]) ->
+        -- ne ne sais pas trop ce que j'ai fait ici, mais on moins ca a pousse
+        -- l'erreur plus loin
+      Just (Vobj "macro" [Vfun (macroexpander)]) -> 
+        -- En parlant de h2l: la partie qui gère les macros va aussi devoir 
+        -- utiliser ce même Lpending, exactement comme le cas pour Vsf, sauf qu'il 
+        -- faudra convertir les Sexp entre leur forme Haskell et leur forme Psil 
+        -- (avec h2p_sexp et p2h_sexp). 
+
+        -- Lelab (Sexp -> Lexp)
+        -- p2h_sexp :: Value -> Sexp
+        -- h2p_sexp :: Sexp -> Value
+        -- macroexpander :: Value -> Value
+        -- p2h_sexp macroexpander :: Value -> Sexp
+        -- p2h_sexp macroexpander h2p_sexp :: Sexp -> Value -> Value -> Sexp 
+        -- s2l p2h_sexp macroexpander h2p_sexp :: Sexp -> Value -> Value -> Sexp -> Lexp 
+
+        --  Lelab f
+        -- f doit etre une fonction qui attends un Sexp et renvoie un Lexp
+        -- p2h_sexp macroexpander v :: Sexp 
+        -- comment fabriquer f à partir de macroexpander ?
+        -- 
+        Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
       _ -> s2l venv s
 h2l venv (Scons s1 s2) =
     case h2l venv s1 of
@@ -406,7 +432,11 @@ synth tenv (Lapp e1 e2) =
       _ -> error ("Not a function: " ++ show e1)
 synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
 -- ¡¡COMPLÉTER!!
+-- synth _ (Lquote (Vstr st)) = Tprim st 
+-- synth _tenv (Lquote (Vsf st sf)) = Tprim st
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
+
+-- type SpecialForm = VEnv -> Sexp -> Lexp
 
 
         

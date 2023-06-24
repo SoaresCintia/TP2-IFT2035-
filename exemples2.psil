@@ -21,16 +21,16 @@
 
 ;; Une macro triviale.
 (def macro-id (macro (fun s s)))
-;(def cinq (macro-id 5))
+(def cinq (macro-id 5))
 
 ;; On peut donner un nouveau nom aux formes spéciales comme `fun`:
-;(def myfun1 fun)
-;(def r8 (: (myfun1 x (+ x 1)) (Int -> Int)))
+(def myfun1 fun)
+(def r8 (: (myfun1 x (+ x 1)) (Int -> Int)))
 
 ;; Macro moins triviale: `fun` avec arguments inversés!
-;(def revfun
-;     (macro (fun body (moremacro
-;                      (fun arg (cons (cons 'fun arg) body))))))
+(def revfun
+     (macro (fun body (moremacro
+                      (fun arg (cons (cons 'fun arg) body))))))
 
 ;(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
 ;(def r10 (r9 6))                                 ; ↝ 13 : Int
