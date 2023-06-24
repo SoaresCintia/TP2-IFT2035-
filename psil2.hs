@@ -434,6 +434,8 @@ synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
 -- ¡¡COMPLÉTER!!
 -- synth _ (Lquote (Vstr st)) = Tprim st 
 -- synth _tenv (Lquote (Vsf st sf)) = Tprim st
+synth _tenv (Lquote (Vobj _st [_val])) = Tprim "Sexp"
+
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
 
 -- type SpecialForm = VEnv -> Sexp -> Lexp
