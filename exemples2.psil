@@ -27,6 +27,11 @@
 (def myfun1 fun)
 (def r8 (: (myfun1 x (+ x 1)) (Int -> Int)))
 
+;;;; mon exemple
+(def r8a (r8 7))                                  ; ↝ 8 : Int
+;;;; mon exemple avec if
+;(def rif (if (true)(1)(0)))
+
 ;; Macro moins triviale: `fun` avec arguments inversés!
 (def revfun
      (macro (fun body (moremacro
@@ -85,7 +90,7 @@
 ;               (z (* x y)))
 ;           (+ z x)))
 
-;(dec not (Bool -> Bool))
+(dec not (Bool -> Bool))
 ;(def not (λ (x) (if x false true)))
 
 ;(defmacro and (e1 e2)

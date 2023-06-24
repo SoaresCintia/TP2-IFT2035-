@@ -307,7 +307,11 @@ sf_fun venv (Ssym x) =
 sf_fun _ x = error ("devrait être un identifiant: " ++ showSexp x)
 
 sf_if :: SpecialForm
-sf_if _venv _sc =  error "¡¡COMPLÉTER!! sf_if"
+sf_if venv  (Scons Snil ec) =  --error "¡¡COMPLÉTER!! sf_if"
+    -- il faut envoyer un argument a la fois
+    -- car Lelab prends attends juste un Sexp, pas deux
+    -- ceci complile, mais pas encore teste
+    Lpending (Lelab (\ ef -> Lpending (Lelab ( \ev -> Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
 
 sf_let :: SpecialForm
 sf_let venv (Scons Snil (Scons (Scons Snil (Ssym x)) e1)) = --error "¡¡COMPLÉTER!! sf_let"
@@ -351,8 +355,25 @@ h2l venv (s@(Ssym name)) =
         -- f doit etre une fonction qui attends un Sexp et renvoie un Lexp
         -- p2h_sexp macroexpander v :: Sexp 
         -- comment fabriquer f à partir de macroexpander ?
-        -- 
+        
+        -- s2l et h2l fonctionnent pour la macro id
+        -- Lpending (Lelab ((s2l venv) . p2h_sexp . macroexpander . h2p_sexp))
         Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
+
+--       Re: Arguments de formes spéciales et macros
+-- par Stefan Monnier, dimanche 18 juin 2023, 10:03
+-- Les moremacros sont renvoyés par l'expansion des macros qui ont besoin de plus d'arguments.
+-- Comme vous pouvez le voir dans env0, un appel à moremacro renvoie une valeur de la forme Vobj "moremacro" [expander].
+-- Donc il faudra traiter une valeur de cette forme lorsqu'elle est renvoyée comme résultat d'une expansion de macro (ou de "moremacro" aussi, bien sûr).  
+ -- Les macros.
+        -- ("macro", Tarw (Tarw pt_sexp pt_sexp) pt_macro,
+        --  Vfun (\expander -> Vobj "macro" [expander])),
+        -- ("moremacro", Tarw (Tarw pt_sexp pt_sexp) pt_sexp,
+        --  Vfun (\expander -> Vobj "moremacro" [expander]))]
+
+    --   Just (Vobj "moremacro" [expander]) -> 
+    --     Lpending (Lelab ((h2l venv expander )))
+
       _ -> s2l venv s
 h2l venv (Scons s1 s2) =
     case h2l venv s1 of
