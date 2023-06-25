@@ -37,12 +37,14 @@
 (def testIf2 (if false 0 1))
 
 ;; Macro moins triviale: `fun` avec arguments inversés!
-;(def revfun
-;     (macro (fun body (moremacro
-;                      (fun arg (cons (cons 'fun arg) body))))))
+(def revfun
+     (macro (fun body (moremacro
+                      (fun arg (cons (cons 'fun arg) body))))))
 
 ; un teste plus simple pour revfun, mon exemple
+
 ;(def r9p (revfun 3 4))
+
 ; exemple plus simple pour tester un macro avec 3 args, mon exemple
 ;(def revfun3
 ;     (macro (fun body (moremacro

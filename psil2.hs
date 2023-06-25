@@ -12,6 +12,7 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
 {-# HLINT ignore "Use <$>" #-}
 {-# HLINT ignore "Avoid lambda using `infix`" #-}
+{-# HLINT ignore "Use isNothing" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
@@ -317,10 +318,60 @@ sf_if venv ec =  --error "¡¡COMPLÉTER!! sf_if"
     Lpending (Lelab (\ ev -> Lpending (Lelab ( \ef -> Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
 
 sf_let :: SpecialForm
-sf_let venv (Scons Snil (Scons (Scons Snil (Ssym x)) e1)) = --error "¡¡COMPLÉTER!! sf_let"
-     Lpending (Lelab (\ e2 -> Llet x (s2l venv e1) (s2l venv e2) ))
+-- sf_let venv (Scons Snil (Scons (Scons Snil (Ssym x)) e1)) = --error "¡¡COMPLÉTER!! sf_let"
+--      Lpending (Lelab (\ e2 -> Llet x (s2l venv e1) (s2l venv e2) ))
+-- sf_let venv (Scons decl)
 -- sexpOf "((x 5))"
 --Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 5))
+
+-- sf_let venv sexp = 
+--     let 
+--         listSexp = sexp2list sexp--trace(show(sexp2list sexp)) $ sexp2list sexp
+--         sf_let' env lsexp = 
+--             case lsexp of
+--                 [Scons (Scons Snil (Ssym x)) e] -> 
+--                     Lpending (Lelab (\ e2 -> Llet x (s2l env e) (s2l env e2) ))
+--                 (Scons (Scons Snil (Ssym y)) e'):res -> 
+--                     Llet y (s2l env e') (sf_let' env res)
+--                     -- Lpending (Lelab (\e2 -> Llet y () e2))
+--     in 
+--         trace(show(sf_let' venv listSexp)) $ (sf_let' venv listSexp)
+
+sf_let venv sexp = 
+    let 
+        listSexpRev =  sexp2list sexp--trace(show(sexp2list sexp)) $ sexp2list sexp
+        sf_let' env lsexp ePending = 
+            case lsexp of
+                [] -> ePending-- 
+                (Scons (Scons Snil (Ssym y)) e):res -> 
+                      Llet y (s2l env e) (sf_let' env res ePending) 
+                
+    in 
+        case listSexpRev of
+            [] -> error ("Il n'y a pas de déclaration dans let")--Lpending (Lelab (\e2 -> Llet _ _ e2)) ?
+            (Scons (Scons Snil (Ssym x)) e) : res ->
+                Lpending (Lelab (\e2 -> Llet x (s2l venv e) (sf_let' venv res (s2l venv e2)) ))
+ 
+ 
+        -- trace(show(sf_let' venv listSexp)) $ (sf_let' venv listSexp)
+--  Llet "x" (Lnum 1) (Llet "y" (Lnum 2) (Lpending <elabfun>))
+
+-- sf_let venv sexp = foldr () () (sexp2list)
+
+-- Scons (Scons (Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 1))) 
+--              (Scons (Scons Snil (Ssym "y")) (Snum 2))) 
+--       (Scons (Scons Snil (Ssym "z")) (Snum 3))        
+-- [Scons (Scons Snil (Ssym "x")) (Snum 1),
+--  Scons (Scons Snil (Ssym "y")) (Snum 2),
+--  Scons (Scons Snil (Ssym "z")) (Snum 3)]
+
+-- Scons (Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 1))) 
+--         (Scons (Scons Snil (Ssym "y")) (Snum 2))
+-- [Scons (Scons Snil (Ssym "x")) (Snum 1),
+--  Scons (Scons Snil (Ssym "y")) (Snum 2)]
+
+-- Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 5))
+--[Scons (Scons Snil (Ssym "x")) (Snum 1)]
 
 sf_quote :: SpecialForm
 sf_quote _venv s = Lquote (h2p_sexp s)
@@ -339,16 +390,18 @@ h2l venv (s@(Ssym name)) =
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
       -- ¡¡COMPLÉTER!!  Just (Vobj "macro" [Vfun macroexpander]) ->
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
-        let  resultExp = macroexpander (h2p_sexp s) in
-            case resultExp of
-                Vobj "moremacro" [Vfun (macroexpander')] ->  
-                    Lpending (Lelab (\_ -> Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp ))))
-                    -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
-                    --Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander' (h2p_sexp s2))))))
-                        --let venv' = minsert venv s resultExp in
-                        --Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
-                _ -> 
-                    Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
+        Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander (h2p_sexp s2))))))
+        -- let  resultExp = macroexpander (h2p_sexp s) in
+        --     case resultExp of
+        --         Vobj "moremacro" [Vfun (macroexpander')] ->  
+        --             -- Lpending (Lelab (\s2 -> Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp ))))
+        --             -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
+        --             Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander' (h2p_sexp s2))))))
+        --     --             --let venv' = minsert venv s resultExp in
+        --                 -- Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
+        --         _ -> 
+        --             -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
+        --             Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander (h2p_sexp s2))))))
       _ -> s2l venv s
 h2l venv (Scons s1 s2) =
     case h2l venv s1 of--trace (show (h2l venv s1)) $ h2l venv s1 of
@@ -417,8 +470,7 @@ check tenv (Lif ec ev ef) t =
         -- if (ecT == Nothing) && (evT == Nothing) && (efT == Nothing) then Nothing
         -- else Just ("Erreur de type dans Lif.")
 
--- pt_bool :: Ltype
--- pt_bool = Tprim "Bool"
+check _tenv (Llet _var _exp1 _exp2) _t = error ("Completer check de Llet")
 
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
@@ -445,9 +497,11 @@ synth tenv (Lapp e1 e2) =
       _ -> error ("Not a function: " ++ show e1)
 synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
 -- ¡¡COMPLÉTER!!
--- synth _ (Lquote (Vstr st)) = Tprim st 
--- synth _tenv (Lquote (Vsf st sf)) = Tprim st
+-- est-ce qu'il faut fair le synth de Llet avec 0 declarations ?
+-- synth _tenv (Llet )
+
 synth _tenv (Lquote (Vobj _st [_val])) = Tprim "Sexp"
+
 
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
 
@@ -595,6 +649,7 @@ eval venv (Lif ec ev ef) =
         case trace(show (valOfec)) valOfec of
             Vnum 1 -> eval venv ev
             _ -> eval venv ef 
+
 
 -- État de l'évaluateur.
 type EState = ((TEnv, VEnv),       -- Contextes de typage et d'évaluation.
