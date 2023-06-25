@@ -28,15 +28,11 @@ data Ltype = Tprim PrimType
            | Tarw Ltype Ltype   -- Type "arrow" des fonctions.
            deriving (Show, Eq)
 
--- On défini un type séparé pour pouvoir lui donner une instance de `Show`
--- manuellement (`deriving` ne fonctionne pas avec les fonctions),
--- pour que `deriving` fonctionne lors de la définition de `Lexp`.
+
 data Lelab = Lelab (Sexp -> Lexp)
-instance Show Lelab where
-    showsPrec _p _ = showString "<elabfun>"
+
 data Delab = Delab (Sexp -> Ldec)
-instance Show Delab where
-    showsPrec _p _ = showString "<elabfun>"
+
 
 -- Lpending et Dpending sont utilisés pour implanter le "currying":
 -- lorsqu'on élabore une Sexp de la forme (Scons s1 s2), si `s1`
