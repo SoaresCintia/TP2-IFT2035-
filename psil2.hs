@@ -342,8 +342,11 @@ h2l venv (s@(Ssym name)) =
         let  resultExp = macroexpander (h2p_sexp s) in
             case resultExp of
                 Vobj "moremacro" [Vfun (macroexpander')] ->  
+                    Lpending (Lelab (\_ -> Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp ))))
                     -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
-                    Lpending (Lelab (\_s -> Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
+                    --Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander' (h2p_sexp s2))))))
+                        --let venv' = minsert venv s resultExp in
+                        --Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
                 _ -> 
                     Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
       _ -> s2l venv s
@@ -400,11 +403,28 @@ check tenv (Lfun x e) (Tarw t1 t2) =
 check _ (Lfun _ _) t =
     error ("Type invalide pour Lfun (n'est pas de la forme t1->t2): " ++ show t)
 -- ¡¡COMPLÉTER!!
+check tenv (Lif ec ev ef) t =
+    let
+        ecT = check tenv ec pt_bool
+        evT = check tenv ev t
+        efT = check tenv ef t
+    in
+        if (ecT == Nothing)then (--trace(show(ecT == Nothing))$(ecT == Nothing)) then (
+            if (evT == Nothing) then (
+                efT
+            ) else evT
+        ) else ecT
+        -- if (ecT == Nothing) && (evT == Nothing) && (efT == Nothing) then Nothing
+        -- else Just ("Erreur de type dans Lif.")
+
+-- pt_bool :: Ltype
+-- pt_bool = Tprim "Bool"
+
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
   -- type attendu.
   = let t' = synth tenv e
-    in if t == t' then Nothing
+    in if t == t' then Nothing -- trace(show(t == t'))$
        else Just ("Erreur de type: " ++ show t ++ " ≠ " ++ show t')
 
 -- `synth Γ e` vérifie que `e` est typé correctement et ensuite "synthétise"
@@ -567,13 +587,13 @@ eval venv (Lfun x e) = Vfun (\ v -> eval (minsert venv x v) e)
 eval _ (Lpending e) = error ("Expression incomplète: " ++ show e)
 -- ¡¡COMPLÉTER!! 
 eval _venv (Lquote val) = --trace ( show (h2p_sexp (  p2h_sexp val))) $ h2p_sexp (  p2h_sexp val) -- <sym "fun">
-    trace ( show ( val)) $  val -- <sym "fun">
+       val -- <sym "fun">
     --trace ( show ( eval venv (  p2h_sexp val))) $ eval venv (  p2h_sexp val) -- <sym "fun">
 
 eval venv (Lif ec ev ef) = 
     let valOfec = eval venv ec in
-        case valOfec of
-            Vstr "true" -> eval venv ev
+        case trace(show (valOfec)) valOfec of
+            Vnum 1 -> eval venv ev
             _ -> eval venv ef 
 
 -- État de l'évaluateur.

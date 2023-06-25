@@ -7,9 +7,16 @@
 ;(def cinq (macro-id 5))
 
 ;; Macro moins triviale: `fun` avec arguments inversés! (de exemples2.psil)
-(def revfun
-     (macro (fun body (moremacro
-                      (fun arg (cons (cons 'fun arg) body))))))
+;(def revfun
+;     (macro (fun body (moremacro
+;                      (fun arg (cons (cons 'fun arg) body))))))
 
-(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+;(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+
+;;;; mon exemple avec if
+(dec rif Int)
+(def rif (if true 1 0))
+
+(dec testIf2 Int)
+(def testIf2 (if false 0 1))
 
