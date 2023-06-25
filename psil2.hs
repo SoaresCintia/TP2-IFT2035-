@@ -310,7 +310,7 @@ sf_fun venv (Ssym x) =
 sf_fun _ x = error ("devrait être un identifiant: " ++ showSexp x)
 
 sf_if :: SpecialForm
-sf_if venv  (Scons Snil ec) =  --error "¡¡COMPLÉTER!! sf_if"
+sf_if venv ec =  --error "¡¡COMPLÉTER!! sf_if"
     -- il faut envoyer un argument a la fois
     -- car Lelab prends attends juste un Sexp, pas deux
     -- ceci complile, mais pas encore teste
@@ -564,7 +564,15 @@ eval venv (Lapp e1 e2) =
 eval venv (Llet x e1 e2) = eval (minsert venv x (eval venv e1)) e2
 eval venv (Lfun x e) = Vfun (\ v -> eval (minsert venv x v) e)
 eval _ (Lpending e) = error ("Expression incomplète: " ++ show e)
--- ¡¡COMPLÉTER!!
+-- ¡¡COMPLÉTER!! 
+eval _venv (Lquote val) = --trace ( show (h2p_sexp (  p2h_sexp val))) $ h2p_sexp (  p2h_sexp val) -- <sym "fun">
+    trace ( show ( val)) $  val -- <sym "fun">
+    --trace ( show ( eval venv (  p2h_sexp val))) $ eval venv (  p2h_sexp val) -- <sym "fun">
+eval venv (Lif ec ev ef) = 
+    let valOfec = eval venv ec in
+        case valOfec of
+            Vstr "true" -> eval venv ev
+            _ -> eval venv ef 
 
 -- État de l'évaluateur.
 type EState = ((TEnv, VEnv),       -- Contextes de typage et d'évaluation.

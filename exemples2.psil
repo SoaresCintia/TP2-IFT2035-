@@ -30,14 +30,14 @@
 ;;;; mon exemple
 (def r8a (r8 7))                                  ; ↝ 8 : Int
 ;;;; mon exemple avec if
-;(def rif (if (true)(1)(0)))
+(def rif (if true 1 0))
 
 ;; Macro moins triviale: `fun` avec arguments inversés!
 (def revfun
      (macro (fun body (moremacro
                       (fun arg (cons (cons 'fun arg) body))))))
 
-;(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
 ;(def r10 (r9 6))                                 ; ↝ 13 : Int
 
 ;; Utiliser `macro` + `fun` + `moremacro` pour recevoir les différents

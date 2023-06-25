@@ -61,17 +61,9 @@ data Ldec = Ddec Var Ltype      -- Déclaration globale.
           | Dpending Delab      -- Nœud interne utilisé pendant l'élaboration.
           deriving (Show)
 
+-- Converti une Sexp Haskell en une Sexp Psil.
+h2p_sexp :: Sexp -> Value
+
 -- Converti une Sexp Psil en une Sexp Haskell.
 p2h_sexp :: Value -> Sexp
-p2h_sexp (Vobj "num" [Vnum n]) = Snum n
-p2h_sexp (Vobj "nil" []) = Snil
-p2h_sexp (Vobj "sym" [Vstr s]) = Ssym s
-p2h_sexp (Vobj "cons" [v1, v2]) = Scons (p2h_sexp v1) (p2h_sexp v2)
-p2h_sexp (Vobj "moremacro" _) = error "moremacro inattendu"
-p2h_sexp v = error ("Pas une Sexp: " ++ show v)
-
-fonctions qui envoie Lexp
-s2l :: VEnv -> Sexp -> Lexp
-
-h2l :: VEnv -> Sexp -> Lexp
 
