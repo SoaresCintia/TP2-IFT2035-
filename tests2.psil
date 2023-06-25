@@ -1,3 +1,15 @@
 ; semblable a un des exemples
-(dec f (Int -> Int))
-(def f (fun y (+ y 5)))                 ; ↝ <fonction> : Int -> Int
+;(dec f (Int -> Int))
+;(def f (fun y (+ y 5)))                 ; ↝ <fonction> : Int -> Int
+
+;; Une macro triviale. (de exemples2.psil)
+;(def macro-id (macro (fun s s)))
+;(def cinq (macro-id 5))
+
+;; Macro moins triviale: `fun` avec arguments inversés! (de exemples2.psil)
+(def revfun
+     (macro (fun body (moremacro
+                      (fun arg (cons (cons 'fun arg) body))))))
+
+(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+

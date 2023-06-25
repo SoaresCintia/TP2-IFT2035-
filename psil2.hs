@@ -10,6 +10,8 @@
 {-# HLINT ignore "Use putStr" #-}
 {-# HLINT ignore "Use concatMap" #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# HLINT ignore "Use <$>" #-}
+{-# HLINT ignore "Avoid lambda using `infix`" #-}
 --
 -- Ce fichier défini les fonctionalités suivantes:
 -- - Analyseur lexical
@@ -24,6 +26,7 @@
 import Text.ParserCombinators.Parsec -- Bibliothèque d'analyse syntaxique.
 import Data.Char                -- Conversion de Chars de/vers Int et autres.
 import System.IO                -- Pour stdout, hPutStr
+import Debug.Trace
 
 ---------------------------------------------------------------------------
 -- 1ère représentation interne des expressions de notre language         --
@@ -335,48 +338,16 @@ h2l venv (s@(Ssym name)) =
     case mmlookup venv name of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
       -- ¡¡COMPLÉTER!!  Just (Vobj "macro" [Vfun macroexpander]) ->
-        -- ne ne sais pas trop ce que j'ai fait ici, mais on moins ca a pousse
-        -- l'erreur plus loin
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
-        -- En parlant de h2l: la partie qui gère les macros va aussi devoir 
-        -- utiliser ce même Lpending, exactement comme le cas pour Vsf, sauf qu'il 
-        -- faudra convertir les Sexp entre leur forme Haskell et leur forme Psil 
-        -- (avec h2p_sexp et p2h_sexp). 
-
-        -- Lelab (Sexp -> Lexp)
-        -- p2h_sexp :: Value -> Sexp
-        -- h2p_sexp :: Sexp -> Value
-        -- macroexpander :: Value -> Value
-        -- p2h_sexp macroexpander :: Value -> Sexp
-        -- p2h_sexp macroexpander h2p_sexp :: Sexp -> Value -> Value -> Sexp 
-        -- s2l p2h_sexp macroexpander h2p_sexp :: Sexp -> Value -> Value -> Sexp -> Lexp 
-
-        --  Lelab f
-        -- f doit etre une fonction qui attends un Sexp et renvoie un Lexp
-        -- p2h_sexp macroexpander v :: Sexp 
-        -- comment fabriquer f à partir de macroexpander ?
-        
-        -- s2l et h2l fonctionnent pour la macro id
-        -- Lpending (Lelab ((s2l venv) . p2h_sexp . macroexpander . h2p_sexp))
-        Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
-
---       Re: Arguments de formes spéciales et macros
--- par Stefan Monnier, dimanche 18 juin 2023, 10:03
--- Les moremacros sont renvoyés par l'expansion des macros qui ont besoin de plus d'arguments.
--- Comme vous pouvez le voir dans env0, un appel à moremacro renvoie une valeur de la forme Vobj "moremacro" [expander].
--- Donc il faudra traiter une valeur de cette forme lorsqu'elle est renvoyée comme résultat d'une expansion de macro (ou de "moremacro" aussi, bien sûr).  
- -- Les macros.
-        -- ("macro", Tarw (Tarw pt_sexp pt_sexp) pt_macro,
-        --  Vfun (\expander -> Vobj "macro" [expander])),
-        -- ("moremacro", Tarw (Tarw pt_sexp pt_sexp) pt_sexp,
-        --  Vfun (\expander -> Vobj "moremacro" [expander]))]
-
-    --   Just (Vobj "moremacro" [expander]) -> 
-    --     Lpending (Lelab ((h2l venv expander )))
-
+        let  resultExp = macroexpander (h2p_sexp s) in
+            case resultExp of
+                Vobj "moremacro" [Vfun (macroexpander')] ->  
+                    Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
+                _ -> 
+                    Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
       _ -> s2l venv s
 h2l venv (Scons s1 s2) =
-    case h2l venv s1 of
+    case h2l venv s1 of--trace (show (h2l venv s1)) $ h2l venv s1 of
       Lpending (Lelab ef) -> ef s2
       _ -> Lapp (s2l venv s1) (s2l venv s2)
 h2l venv s = s2l venv s
@@ -386,7 +357,7 @@ s2l :: VEnv -> Sexp -> Lexp
 s2l _ (Snum n) = Lnum n
 s2l _ (Ssym s) = Lvar s
 s2l venv (s@(Scons _ _)) =
-    case h2l venv s of
+    case h2l venv s of--trace (show (h2l venv s)) $ h2l venv s of
       Lpending _ -> error ("Argument manquant dans une macro ou forme spéciale")
       le -> le
 s2l _ se = error ("Expression Psil inconnue: " ++ (showSexp se))
