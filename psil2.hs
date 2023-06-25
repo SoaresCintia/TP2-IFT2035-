@@ -314,7 +314,7 @@ sf_if venv ec =  --error "¡¡COMPLÉTER!! sf_if"
     -- il faut envoyer un argument a la fois
     -- car Lelab prends attends juste un Sexp, pas deux
     -- ceci complile, mais pas encore teste
-    Lpending (Lelab (\ ef -> Lpending (Lelab ( \ev -> Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
+    Lpending (Lelab (\ ev -> Lpending (Lelab ( \ef -> Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
 
 sf_let :: SpecialForm
 sf_let venv (Scons Snil (Scons (Scons Snil (Ssym x)) e1)) = --error "¡¡COMPLÉTER!! sf_let"
@@ -342,7 +342,8 @@ h2l venv (s@(Ssym name)) =
         let  resultExp = macroexpander (h2p_sexp s) in
             case resultExp of
                 Vobj "moremacro" [Vfun (macroexpander')] ->  
-                    Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
+                    -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
+                    Lpending (Lelab (\_s -> Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
                 _ -> 
                     Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
       _ -> s2l venv s
@@ -568,6 +569,7 @@ eval _ (Lpending e) = error ("Expression incomplète: " ++ show e)
 eval _venv (Lquote val) = --trace ( show (h2p_sexp (  p2h_sexp val))) $ h2p_sexp (  p2h_sexp val) -- <sym "fun">
     trace ( show ( val)) $  val -- <sym "fun">
     --trace ( show ( eval venv (  p2h_sexp val))) $ eval venv (  p2h_sexp val) -- <sym "fun">
+
 eval venv (Lif ec ev ef) = 
     let valOfec = eval venv ec in
         case valOfec of
