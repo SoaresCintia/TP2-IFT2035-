@@ -438,13 +438,9 @@ s2d _venv (Ssym "dec") =
                        Ssym name ->
                          Dpending (Delab (\ e -> Ddec name (s2t e)))
                        _ -> error ("Pas un identifiant: " ++ show v)))
-                       
-s2d venv (Ssym "defmacro") =  error "¡¡COMPLÉTER!! s2d macros"
-    Dpending (Delab (\ v ->
-                     case v of
-                       Ssym name ->
-                         Dpending (Delab (\ e -> Ddef name (s2l venv e)))
-                       _ -> error ("Pas un identifiant: " ++ show v)))
+
+s2d _venv (Ssym _v) = error "¡¡COMPLÉTER!! s2d macros"
+--chercher le symbole dans la tete de et verifier c'est une macro
 
 s2d venv (Scons s1 s2) =
     case s2d venv s1 of
