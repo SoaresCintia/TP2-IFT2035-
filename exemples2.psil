@@ -51,44 +51,50 @@
 
 ;(def r9p (revfun 3 x))
 
-; exemple plus simple pour tester un macro avec 3 args, mon exemple
-;(def revfun3
-;     (macro (fun body (moremacro
-;                      (fun arg1 (moremacro
-;                                (fun arg2 (cons (cons 'fun arg1) body))))))))
-
 (def r9 (: (revfun (+ x 7) x) (Int -> Int)))
-;(def r10 (r9 6))                                 ; ↝ 13 : Int
+(def r10 (r9 6))                                 ; ↝ 13 : Int
+
+
+; exemple plus simple pour tester un macro avec 3 args, mon exemple
+(def revfun3
+     (macro (fun body (moremacro
+                      (fun arg1 (moremacro
+                                (fun arg2 (cons (cons 'fun arg1) body))))))))
+
+;teste à utiliser dans le fichier tests2.psil
+(def r9p 
+  (: (revfun3 (+ x 7) x y) (Int -> Int -> Int)))
+  
 
 ;; Utiliser `macro` + `fun` + `moremacro` pour recevoir les différents
 ;; arguments, c'est fatigant.  Définissons une macro
 ;; (multi-macro ARGS BODY) qui fait ça pour nous.
-;(def multi-macro
-;     (macro (fun args
-;                 (moremacro
-;                  (fun body
-;                       (let ((head (car args)))
-;                         (let ((tail (cdr args)))
-;                           (let ((tailfun (cons (cons 'fun tail) body)))
-;                             (if (nil? head)
-;                                 (cons 'macro tailfun)
-;                               (cons (cons 'multi-macro head)
-;                                     (cons 'moremacro tailfun)))))))))))
+(def multi-macro
+     (macro (fun args
+                 (moremacro
+                  (fun body
+                       (let ((head (car args)))
+                         (let ((tail (cdr args)))
+                           (let ((tailfun (cons (cons 'fun tail) body)))
+                             (if (nil? head)
+                                 (cons 'macro tailfun)
+                               (cons (cons 'multi-macro head)
+                                     (cons 'moremacro tailfun)))))))))))
 
 ;; Une autre manière de (re)définir une macro équivalente à `fun`.
-;(def myfun3 (multi-macro (arg body) (cons (cons 'fun arg) body)))
-;(def r11 (: (myfun3 x (+ x 3)) (Int -> Int)))
-;(def r12 (r11 2))
+(def myfun3 (multi-macro (arg body) (cons (cons 'fun arg) body)))
+(def r11 (: (myfun3 x (+ x 3)) (Int -> Int)))
+(def r12 (r11 2))
 
 ;; Tant qu'à y être définissons la macro `defmacro`.
 ;; Notons que c'est une macro qui s'utilise au niveau des déclarations
 ;; et non des expressions, mais les macros Psil ne sont pas regardantes.
-;(def defmacro (multi-macro (name args body)
-;                           (cons (cons 'def name)
-;                                 (cons (cons 'multi-macro args) body))))
+(def defmacro (multi-macro (name args body)
+                           (cons (cons 'def name)
+                                 (cons (cons 'multi-macro args) body))))
 
 ;; Un `λ` à plusieurs arguments (curried).
-;(defmacro λ (args body) !!COMPLÉTER!!)
+;(defmacro lambda (args body) !!COMPLÉTER!!)
 
 ;(dec plus (Int Int -> Int))
 ;(def plus (λ (x y) (+ x y)))
