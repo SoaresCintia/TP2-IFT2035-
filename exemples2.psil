@@ -23,18 +23,24 @@
 (def macro-id (macro (fun s s)))
 (def cinq (macro-id 5))
 
+;notre exemple
+;(def r9        (: (revfun (+ x 7) x) (Int -> Int)))
+
+;(def macro-inc ((fun s ( num (+ s 1)))))
+;(def six (macro-inc 5))
+
 ;; On peut donner un nouveau nom aux formes spéciales comme `fun`:
-(def myfun1 fun)
-(def r8 (: (myfun1 x (+ x 1)) (Int -> Int)))
+;(def myfun1 fun)
+;(def r8 (: (myfun1 x (+ x 1)) (Int -> Int)))
 
 ;;;; mon exemple
-(def r8a (r8 7))                                  ; ↝ 8 : Int
+;(def r8a (r8 7))                                  ; ↝ 8 : Int
 ;;;; mon exemple avec if
-(dec rif Int)
-(def rif (if true 1 0))
+;(dec rif Int)
+;(def rif (if true 1 0))
 
-(dec testIf2 Int)
-(def testIf2 (if false 0 1))
+;(dec testIf2 Int)
+;(def testIf2 (if false 0 1))
 
 ;; Macro moins triviale: `fun` avec arguments inversés!
 (def revfun
@@ -43,7 +49,7 @@
 
 ; un teste plus simple pour revfun, mon exemple
 
-;(def r9p (revfun 3 4))
+;(def r9p (revfun 3 x))
 
 ; exemple plus simple pour tester un macro avec 3 args, mon exemple
 ;(def revfun3
@@ -51,7 +57,7 @@
 ;                      (fun arg1 (moremacro
 ;                                (fun arg2 (cons (cons 'fun arg1) body))))))))
 
-;(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
 ;(def r10 (r9 6))                                 ; ↝ 13 : Int
 
 ;; Utiliser `macro` + `fun` + `moremacro` pour recevoir les différents

@@ -339,7 +339,6 @@ sf_let :: SpecialForm
 
 sf_let venv sexp = 
     let 
-        listSexpRev =  sexp2list sexp--trace(show(sexp2list sexp)) $ sexp2list sexp
         sf_let' env lsexp ePending = 
             case lsexp of
                 [] -> ePending-- 
@@ -347,12 +346,18 @@ sf_let venv sexp =
                       Llet y (s2l env e) (sf_let' env res ePending) 
                 
     in 
-        case listSexpRev of
-            [] -> error ("Il n'y a pas de déclaration dans let")--Lpending (Lelab (\e2 -> Llet _ _ e2)) ?
+        case sexp2list sexp of
+            [] -> error ("Il n'y a pas de déclaration dans let") 
             (Scons (Scons Snil (Ssym x)) e) : res ->
                 Lpending (Lelab (\e2 -> Llet x (s2l venv e) (sf_let' venv res (s2l venv e2)) ))
  
  
+
+-- toujours quand on envoie une fonction dans un Lpending, ca donne l'erreur
+--   *** Exception: Argument manquant dans une macro ou forme spéciale
+
+
+
         -- trace(show(sf_let' venv listSexp)) $ (sf_let' venv listSexp)
 --  Llet "x" (Lnum 1) (Llet "y" (Lnum 2) (Lpending <elabfun>))
 
@@ -389,19 +394,17 @@ h2l venv Snil = Lpending (Lelab (h2l venv))
 h2l venv (s@(Ssym name)) =
     case mmlookup venv name of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
-      -- ¡¡COMPLÉTER!!  Just (Vobj "macro" [Vfun macroexpander]) ->
+
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
-        let  resultExp = macroexpander (h2p_sexp s) in
-            case resultExp of
-                Vobj "moremacro" [Vfun (macroexpander')] ->  
-                    -- Lpending (Lelab (\_ -> Lpending (Lelab ((s2l venv) . p2h_sexp . macroexpander' . h2p_sexp ))))
-                    -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
-                    Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander' (h2p_sexp s2))))))
-                        -- let venv' = minsert venv s resultExp in
-                        -- Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
-                _ -> 
-                    Lpending (Lelab ((s2l venv) . p2h_sexp . macroexpander . h2p_sexp))
+        Lpending (Lelab (\s2 -> 
+            let resultat = macroexpander (h2p_sexp s2) in 
+                case resultat of
+                    Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
+                        Lpending (Lelab (\s3 -> (s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+                    _ -> (s2l venv) (p2h_sexp(resultat ))   
+        ))
       _ -> s2l venv s
+
 
 h2l venv (Scons s1 s2) =
     case h2l venv s1 of--trace (show (h2l venv s1)) $ h2l venv s1 of
@@ -435,8 +438,13 @@ s2d _venv (Ssym "dec") =
                        Ssym name ->
                          Dpending (Delab (\ e -> Ddec name (s2t e)))
                        _ -> error ("Pas un identifiant: " ++ show v)))
-s2d _venv (Ssym "macro") = error "¡¡COMPLÉTER!! s2d macros"
-
+                       
+s2d venv (Ssym "defmacro") =  error "¡¡COMPLÉTER!! s2d macros"
+    Dpending (Delab (\ v ->
+                     case v of
+                       Ssym name ->
+                         Dpending (Delab (\ e -> Ddef name (s2l venv e)))
+                       _ -> error ("Pas un identifiant: " ++ show v)))
 
 s2d venv (Scons s1 s2) =
     case s2d venv s1 of
@@ -501,9 +509,13 @@ check tenv (Llet x1 e1 ef) t =
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
   -- type attendu.
-  = let t' = synth tenv e
+  = let t' = synth tenv e--(trace(show(e)) e)
     in if t == t' then Nothing -- trace(show(t == t'))$
        else Just ("Erreur de type: " ++ show t ++ " ≠ " ++ show t')
+
+-- t c'est le type souhaité
+-- t' c'esst le type trouvé
+
 
 -- `synth Γ e` vérifie que `e` est typé correctement et ensuite "synthétise"
 -- et renvoie son type `τ`.
@@ -523,16 +535,11 @@ synth tenv (Lapp e1 e2) =
       _ -> error ("Not a function: " ++ show e1)
 synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
 -- ¡¡COMPLÉTER!!
--- est-ce qu'il faut fair le synth de Llet avec 0 declarations ?
--- c'est quoi une Lexp de let avec 0 declarations ? 
--- synth _tenv (Llet )
 
 synth _tenv (Lquote (Vobj _st [_val])) = Tprim "Sexp"
 
 
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
-
--- type SpecialForm = VEnv -> Sexp -> Lexp
 
 
         
