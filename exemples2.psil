@@ -48,13 +48,12 @@
                              (if (nil? head)
                                  (cons 'macro tailfun)
                                (cons (cons 'multi-macro head)
-                                     (cons 'moremacro tailfun)))))))))))
-;  <macro <Fonction>> : Tprim "Macro"
+                                     (cons 'moremacro tailfun)))))))))))   ;  <macro <Fonction>> : Tprim "Macro"
 
 ;; Une autre manière de (re)définir une macro équivalente à `fun`.
 (def myfun3 (multi-macro (arg body) (cons (cons 'fun arg) body)))   ;<macro <Fonction>> : Tprim "Macro"
-(def r11 (: (myfun3 x (+ x 3)) (Int -> Int)))       ;  <Fonction> : Tarw (Tprim "Int") (Tprim "Int")
-(def r12 (r11 2))     ;  5 : Tprim "Int"
+(def r11 (: (myfun3 x (+ x 3)) (Int -> Int)))                       ;  <Fonction> : Tarw (Tprim "Int") (Tprim "Int")
+(def r12 (r11 2))                                                   ;  5 : Tprim "Int"
 
 ;; Tant qu'à y être définissons la macro `defmacro`.
 ;; Notons que c'est une macro qui s'utilise au niveau des déclarations
@@ -64,7 +63,9 @@
                                  (cons (cons 'multi-macro args) body))))    ;<macro <Fonction>> : Tprim "Macro"
 
 ;; Un `λ` à plusieurs arguments (curried).
-(defmacro λ (args body) !!COMPLÉTER!!)
+(defmacro λ (args body) 
+
+)
 
 (dec plus (Int Int -> Int))
 (def plus (λ (x y) (+ x y)))
