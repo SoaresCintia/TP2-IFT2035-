@@ -439,8 +439,16 @@ s2d _venv (Ssym "dec") =
                          Dpending (Delab (\ e -> Ddec name (s2t e)))
                        _ -> error ("Pas un identifiant: " ++ show v)))
 
-s2d _venv (Ssym _v) = error "¡¡COMPLÉTER!! s2d macros"
+s2d venv (Ssym v) = --error "¡¡COMPLÉTER!! s2d macros"
 --chercher le symbole dans la tete de et verifier c'est une macro
+    case mmlookup venv v of
+        Nothing -> error ("Macro inconu")
+        Just (Vobj "macro" [Vfun (_macroexpander)]) ->
+            Dpending (Delab (\ s ->
+                     case s of
+                       Ssym name ->
+                         Dpending (Delab (\ e -> Ddec name (s2t e)))
+                       _ -> error ("Pas un identifiant: " ++ show s)))
 
 s2d venv (Scons s1 s2) =
     case s2d venv s1 of
@@ -676,7 +684,7 @@ eval _venv (Lquote val) = --trace ( show (h2p_sexp (  p2h_sexp val))) $ h2p_sexp
 
 eval venv (Lif ec ev ef) = 
     let valOfec = eval venv ec in
-        case trace(show (valOfec)) valOfec of
+        case valOfec of
             Vnum 1 -> eval venv ev
             _ -> eval venv ef 
 
