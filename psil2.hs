@@ -318,24 +318,6 @@ sf_if venv ec =  --error "¡¡COMPLÉTER!! sf_if"
     Lpending (Lelab (\ ev -> Lpending (Lelab ( \ef -> Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
 
 sf_let :: SpecialForm
--- sf_let venv (Scons Snil (Scons (Scons Snil (Ssym x)) e1)) = --error "¡¡COMPLÉTER!! sf_let"
---      Lpending (Lelab (\ e2 -> Llet x (s2l venv e1) (s2l venv e2) ))
--- sf_let venv (Scons decl)
--- sexpOf "((x 5))"
---Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 5))
-
--- sf_let venv sexp = 
---     let 
---         listSexp = sexp2list sexp--trace(show(sexp2list sexp)) $ sexp2list sexp
---         sf_let' env lsexp = 
---             case lsexp of
---                 [Scons (Scons Snil (Ssym x)) e] -> 
---                     Lpending (Lelab (\ e2 -> Llet x (s2l env e) (s2l env e2) ))
---                 (Scons (Scons Snil (Ssym y)) e'):res -> 
---                     Llet y (s2l env e') (sf_let' env res)
---                     -- Lpending (Lelab (\e2 -> Llet y () e2))
---     in 
---         trace(show(sf_let' venv listSexp)) $ (sf_let' venv listSexp)
 
 sf_let venv sexp = 
     let 
@@ -350,33 +332,6 @@ sf_let venv sexp =
             [] -> error ("Il n'y a pas de déclaration dans let") 
             (Scons (Scons Snil (Ssym x)) e) : res ->
                 Lpending (Lelab (\e2 -> Llet x (s2l venv e) (sf_let' venv res (s2l venv e2)) ))
- 
- 
-
--- toujours quand on envoie une fonction dans un Lpending, ca donne l'erreur
---   *** Exception: Argument manquant dans une macro ou forme spéciale
-
-
-
-        -- trace(show(sf_let' venv listSexp)) $ (sf_let' venv listSexp)
---  Llet "x" (Lnum 1) (Llet "y" (Lnum 2) (Lpending <elabfun>))
-
--- sf_let venv sexp = foldr () () (sexp2list)
-
--- Scons (Scons (Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 1))) 
---              (Scons (Scons Snil (Ssym "y")) (Snum 2))) 
---       (Scons (Scons Snil (Ssym "z")) (Snum 3))        
--- [Scons (Scons Snil (Ssym "x")) (Snum 1),
---  Scons (Scons Snil (Ssym "y")) (Snum 2),
---  Scons (Scons Snil (Ssym "z")) (Snum 3)]
-
--- Scons (Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 1))) 
---         (Scons (Scons Snil (Ssym "y")) (Snum 2))
--- [Scons (Scons Snil (Ssym "x")) (Snum 1),
---  Scons (Scons Snil (Ssym "y")) (Snum 2)]
-
--- Scons Snil (Scons (Scons Snil (Ssym "x")) (Snum 5))
---[Scons (Scons Snil (Ssym "x")) (Snum 1)]
 
 sf_quote :: SpecialForm
 sf_quote _venv s = Lquote (h2p_sexp s)
@@ -441,14 +396,38 @@ s2d _venv (Ssym "dec") =
 
 s2d venv (Ssym v) = --error "¡¡COMPLÉTER!! s2d macros"
 --chercher le symbole dans la tete de et verifier c'est une macro
+-- pas sure s'il faut envoyer un Ddec, ou un Ddef
     case mmlookup venv v of
-        Nothing -> error ("Macro inconu")
-        Just (Vobj "macro" [Vfun (_macroexpander)]) ->
-            Dpending (Delab (\ s ->
-                     case s of
-                       Ssym name ->
-                         Dpending (Delab (\ e -> Ddec name (s2t e)))
-                       _ -> error ("Pas un identifiant: " ++ show s)))
+         Nothing -> error ("Macro inconu")
+         Just (Vobj "macro" [Vfun (macroexpander)]) ->
+            Dpending (Delab (\s2 -> 
+                let resultat = macroexpander (h2p_sexp s2) in 
+                    case resultat of
+                        Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
+                            Dpending (Delab (\s3 -> (s2d venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+                        _ -> (s2d venv) (p2h_sexp(resultat ))    ))-- je pense qu'il faut gérer le cas de plusierus moremacro
+
+    --  case mmlookup venv v of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
+    --         Dpending (Delab  (\ e -> (s2d venv) (p2h_sexp(macroexpander (h2p_sexp e)  )) ))
+    --      _ -> error ("Pas un identifiant: " ++ show v) -- deux Dpending comme pour les autres ?
+
+        -- Lpending (Lelab (\s2 -> (s2l venv) (p2h_sexp(macroexpander (h2p_sexp s2) )) )) 
+            
+            --            
+            --  Dpending (Delab (\ s ->
+            --          case s of
+            --            Ssym name ->
+            --              Dpending (Delab (\ e -> Ddef name (s2l venv e)))
+            --            _ -> error ("Pas un identifiant: " ++ show s)))
+
+                -- Dpending (Delab (\ s ->
+                --      case s of
+                --        Ssym name ->
+                --          Dpending (Delab (\ e -> Ddec name (s2t e)))
+                --        _ -> error ("Pas un identifiant: " ++ show s)))
+
 
 s2d venv (Scons s1 s2) =
     case s2d venv s1 of

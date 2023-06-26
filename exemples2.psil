@@ -62,14 +62,30 @@
                            (cons (cons 'def name)
                                  (cons (cons 'multi-macro args) body))))    ;<macro <Fonction>> : Tprim "Macro"
 
+;;;;;;;;;;;; notre exemple : Une macro triviale avec defmacro
+;(def macro-id (macro (fun s s)))
+;(def cinq (macro-id 5))
+;(defmacro macro-idp (fun s s))
+
+
 ;; Un `λ` à plusieurs arguments (curried).
-(defmacro λ (args body) 
+;(defmacro λ (args body)
+;  (multi-macro (args body) (cons (cons 'fun arg) body))
+;)
 
-)
+;(defmacro λ (args body) 
+;  (let ((head (car args))) 
+;    (let ((tail (cdr args)))
+;      (let ((tailfun (cons (cons 'fun tail) body)))
+;        (if (nil? head)
+;  )
+;))))
 
-(dec plus (Int Int -> Int))
-(def plus (λ (x y) (+ x y)))
-(def r13 (plus 5 9))
+
+
+;(dec plus (Int Int -> Int))
+;(def plus (λ (x y) (+ x y)))
+;(def r13 (plus 5 9))
 
 ;; On pourrait redéfinir `let` pour qu'il accepte plusieurs déclarations
 ;; par macroexpansion plutôt que de le définir directement dans le code Haskell.
@@ -85,10 +101,10 @@
 (def r14 (let ((x 4)
                (y (+ x 6))
                (z (* x y)))
-           (+ z x)))
+           (+ z x)))                                ;   44 : Tprim "Int"
 
-(dec not (Bool -> Bool))
-(def not (λ (x) (if x false true)))
+;(dec not (Bool -> Bool))
+;(def not (λ (x) (if x false true)))
 
 (defmacro and (e1 e2)
   (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
