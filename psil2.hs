@@ -385,24 +385,24 @@ sf_quote _venv s = Lquote (h2p_sexp s)
 -- forme spéciale pour la stocker dans une autre variable.
 h2l :: VEnv -> Sexp -> Lexp
 h2l venv Snil = Lpending (Lelab (h2l venv))
+
 h2l venv (s@(Ssym name)) =
     case mmlookup venv name of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
       -- ¡¡COMPLÉTER!!  Just (Vobj "macro" [Vfun macroexpander]) ->
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
-        Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander (h2p_sexp s2))))))
-        -- let  resultExp = macroexpander (h2p_sexp s) in
-        --     case resultExp of
-        --         Vobj "moremacro" [Vfun (macroexpander')] ->  
-        --             -- Lpending (Lelab (\s2 -> Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp ))))
-        --             -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
-        --             Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander' (h2p_sexp s2))))))
-        --     --             --let venv' = minsert venv s resultExp in
-        --                 -- Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
-        --         _ -> 
-        --             -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander . h2p_sexp))
-        --             Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander (h2p_sexp s2))))))
+        let  resultExp = macroexpander (h2p_sexp s) in
+            case resultExp of
+                Vobj "moremacro" [Vfun (macroexpander')] ->  
+                    -- Lpending (Lelab (\_ -> Lpending (Lelab ((s2l venv) . p2h_sexp . macroexpander' . h2p_sexp ))))
+                    -- Lpending (Lelab ((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp))
+                    Lpending (Lelab (\s2 -> (h2l venv (p2h_sexp( macroexpander' (h2p_sexp s2))))))
+                        -- let venv' = minsert venv s resultExp in
+                        -- Lpending (Lelab (((h2l venv) . p2h_sexp . macroexpander' . h2p_sexp)))))
+                _ -> 
+                    Lpending (Lelab ((s2l venv) . p2h_sexp . macroexpander . h2p_sexp))
       _ -> s2l venv s
+
 h2l venv (Scons s1 s2) =
     case h2l venv s1 of--trace (show (h2l venv s1)) $ h2l venv s1 of
       Lpending (Lelab ef) -> ef s2
@@ -435,7 +435,9 @@ s2d _venv (Ssym "dec") =
                        Ssym name ->
                          Dpending (Delab (\ e -> Ddec name (s2t e)))
                        _ -> error ("Pas un identifiant: " ++ show v)))
-s2d _venv (Ssym _v) = error "¡¡COMPLÉTER!! s2d macros"
+s2d _venv (Ssym "macro") = error "¡¡COMPLÉTER!! s2d macros"
+
+
 s2d venv (Scons s1 s2) =
     case s2d venv s1 of
       Dpending (Delab ef) -> ef s2
@@ -470,7 +472,31 @@ check tenv (Lif ec ev ef) t =
         -- if (ecT == Nothing) && (evT == Nothing) && (efT == Nothing) then Nothing
         -- else Just ("Erreur de type dans Lif.")
 
-check _tenv (Llet _var _exp1 _exp2) _t = error ("Completer check de Llet")
+-- est-ce qu'il faut séparer en cas ? comment faire une Lexp qui n'as pas de déclaration ?
+-- je pense que le cas de base va aller dans le check défaut ?
+
+-- check tenv (Llet x1 e1 ef) t = --error ("Completer check de Llet")
+--     -- synthétiser le type de 
+--     case ef of
+--         -- synthétiser le type de e1 : t1   
+--         -- dans l'environement auquel on a ajouté (x1,t1) on check le type de Llet :
+--         Llet x2 e2 ef' -> 
+--             let 
+--                 t1 = synth tenv e1 
+--             in
+--                 check (minsert tenv x1 t1) ef t 
+
+--         -- synthétiser le type de e1 : t1   
+--         -- dans l'environement auquel on a ajouté (x1,t1) on check le type de ef
+--         _-> 
+
+check tenv (Llet x1 e1 ef) t = 
+        -- synthétiser le type de e1 : t1   
+        -- dans l'environement auquel on a ajouté (x1,t1) on check le type de ef
+        let 
+            t1 = synth tenv e1 
+        in
+            check (minsert tenv x1 t1) ef t
 
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
@@ -498,6 +524,7 @@ synth tenv (Lapp e1 e2) =
 synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
 -- ¡¡COMPLÉTER!!
 -- est-ce qu'il faut fair le synth de Llet avec 0 declarations ?
+-- c'est quoi une Lexp de let avec 0 declarations ? 
 -- synth _tenv (Llet )
 
 synth _tenv (Lquote (Vobj _st [_val])) = Tprim "Sexp"
