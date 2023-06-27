@@ -1,0 +1,92 @@
+   --error "¡¡COMPLÉTER!! s2d macros"
+--chercher le symbole dans la tete de et verifier c'est une macro
+-- pas sure s'il faut envoyer un Ddec, ou un Ddef
+-- and (name) doit prendre le resultat de l'expansion de defmacro
+-- il faut faire un Lpending qui prends les prochains arguments, expand la macro, et apres fait le Ddef
+-- le s1 c'est le name
+-- mais s1 et les prochains arguments sont envoyes à l'expansion
+-- peut etre le sexp qu'il faut envoyer c'est le sandwich de macroexpander 
+    -- case mmlookup venv (trace(show(v)) v) of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->  --            
+    --          Dpending (Delab (\ s1 ->
+    --             case s1 of
+    --                 Ssym name -> Ddef name (s2l venv (p2h_sexp(macroexpander(h2p_sexp(s)))))))
+    --                 _ -> error ("Pas un identifiant: " ++ show s)
+
+
+    -- case mmlookup venv (trace(show(v)) v) of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->  --            
+    --          Dpending (Delab (\ s ->
+    --                  case s of
+    --                    Ssym name ->
+    --                      Dpending (Delab (\ e -> Ddef name (s2l venv e)))
+    --                    _ -> error ("Pas un identifiant: " ++ show s)))
+
+    
+    
+    -- case mmlookup venv (trace(show(v)) v) of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (_macroexpander)]) -> Ddec v (s2t (Ssym v))
+            
+
+    -- *** Exception: Argument en trop: Scons (Scons Snil (Ssym "e1")) (Ssym "e2")
+    -- v : "defmacro"
+    -- case mmlookup venv (trace(show(v)) v) of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
+    --         Dpending (Delab (\e ->
+    --             let resultat = macroexpander (h2p_sexp  e) in 
+    --                 Dpending (Delab( \e2 -> Ddef v (s2l venv e2))
+    --             )))
+            
+            -- Dpending (Delab (\ e -> Ddef v (s2l venv e)))
+            
+
+    -- case mmlookup venv v of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
+    --         Dpending (Delab (\s2 -> 
+    --             let resultat = macroexpander (h2p_sexp s2) in 
+    --                 case resultat of
+    --                     Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
+    --                         Dpending (Delab (\s3 -> (s2d venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+    --                     _ -> (s2d venv) (p2h_sexp(resultat ))    ))-- je pense qu'il faut gérer le cas de plusierus moremacro
+
+    --  case mmlookup venv v of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
+    --         Dpending (Delab  (\ e -> (s2d venv) (p2h_sexp(macroexpander (h2p_sexp e)  )) ))
+    --      _ -> error ("Pas un identifiant: " ++ show v) -- deux Dpending comme pour les autres ?
+
+        -- Lpending (Lelab (\s2 -> (s2l venv) (p2h_sexp(macroexpander (h2p_sexp s2) )) )) 
+            
+        --   case mmlookup venv (trace(show(v)) v) of
+        --  Nothing -> error ("Macro inconu")
+        --  Just (Vobj "macro" [Vfun (macroexpander)]) ->  --            
+        --      Dpending (Delab (\ s ->
+        --              case s of
+        --                Ssym name ->
+        --                  Dpending (Delab (\ e -> Ddef name (s2l venv e)))
+        --                _ -> error ("Pas un identifiant: " ++ show s)))
+    --case mmlookup venv (trace(show(v)) v) of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
+    --             Dpending (Delab (\ s ->
+    --                  case s of
+    --                    Ssym name ->
+    --                      Dpending (Delab (\ e -> Ddec name (s2t e)))
+    --                    _ -> error ("Pas un identifiant: " ++ show s)))
+    -- case mmlookup venv (trace(show(v)) v) of
+    --      Nothing -> error ("Macro inconu")
+    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
+    --         Dpending (Delab (\ e -> Ddef name (s2l venv s)))
+    --      _ -> error ("Pas un identifiant: " ++ show s)
+
+--data Delab = Delab (Sexp -> Ldec)
+-- il faut chercher comme and et lui donner le resultat de l'expansion 
+
+-- il faut envoyer v à h2l ou s2l
+-- Ddef name (s2l venv v)
+-- les autres arguemnts vont venir plus tard

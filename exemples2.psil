@@ -109,8 +109,8 @@
 (defmacro and (e1 e2)
   (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
 
-(def r15 (and true true))
-(def r16 (and true false))
+;(def r15 (and true true))
+;(def r16 (and true false))
 
 ;; Bon, assez souffert, définissons une version minimale de backquote.
 (defmacro shorthand-backquote (e)

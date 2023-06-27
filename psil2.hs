@@ -346,17 +346,36 @@ sf_quote _venv s = Lquote (h2p_sexp s)
 h2l :: VEnv -> Sexp -> Lexp
 h2l venv Snil = Lpending (Lelab (h2l venv))
 
+-- h2l venv (s@(Ssym name)) =
+--     case mmlookup venv name of
+--       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
+
+--       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
+--         Lpending (Lelab (\s2 -> 
+--             let resultat = macroexpander (h2p_sexp s2) in 
+--                 case resultat of
+--                     Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
+--                         Lpending (Lelab (\s3 -> (s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+--                     _ -> (s2l venv) (p2h_sexp(resultat ))   
+--         ))
+--       _ -> s2l venv s
+
 h2l venv (s@(Ssym name)) =
-    case mmlookup venv name of
+    case mmlookup venv (trace(show(name))name) of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
 
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
-        Lpending (Lelab (\s2 -> 
-            let resultat = macroexpander (h2p_sexp s2) in 
-                case resultat of
-                    Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
-                        Lpending (Lelab (\s3 -> (s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
-                    _ -> (s2l venv) (p2h_sexp(resultat ))   
+        -- definir une fonction local tel que si le resultat de l'expansion c'est un
+        -- moremacro, faire un traitement, sinon, faire un autre
+        let 
+            traitementMoremacro val = 
+                case val of
+                    Vobj "moremacro" [Vfun (macroexpander')] -> 
+                        Lpending (Lelab (\s3 -> traitementMoremacro (macroexpander' (h2p_sexp s3 ))))
+                            --(s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+                    _ -> (s2l venv) (p2h_sexp val ) 
+        in
+            Lpending (Lelab (\s2 -> traitementMoremacro (macroexpander (h2p_sexp s2))
         ))
       _ -> s2l venv s
 
@@ -394,39 +413,30 @@ s2d _venv (Ssym "dec") =
                          Dpending (Delab (\ e -> Ddec name (s2t e)))
                        _ -> error ("Pas un identifiant: " ++ show v)))
 
-s2d venv (Ssym v) = --error "¡¡COMPLÉTER!! s2d macros"
---chercher le symbole dans la tete de et verifier c'est une macro
--- pas sure s'il faut envoyer un Ddec, ou un Ddef
-    case mmlookup venv v of
-         Nothing -> error ("Macro inconu")
+s2d venv (Ssym v) =  --error ("erro")
+-- il faut faire un Lpending qui prends les prochains arguments, expand la macro, et apres fait le Ddef
+-- le s1 c'est le name
+-- mais s1 et les prochains arguments sont envoyes à l'expansion
+     case mmlookup venv v of
+         Nothing -> error ("Expression pas valide")
          Just (Vobj "macro" [Vfun (macroexpander)]) ->
-            Dpending (Delab (\s2 -> 
-                let resultat = macroexpander (h2p_sexp s2) in 
-                    case resultat of
-                        Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
-                            Dpending (Delab (\s3 -> (s2d venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
-                        _ -> (s2d venv) (p2h_sexp(resultat ))    ))-- je pense qu'il faut gérer le cas de plusierus moremacro
+             Dpending (Delab (\s1 -> (s2d venv (p2h_sexp(macroexpander(h2p_sexp s1))))))
+                --  case (trace(show(s1)) s1) of
+                --      Ssym name -> 
+                --         --Ddef name (s2l venv (p2h_sexp(macroexpander(h2p_sexp s1))))--(Lpending (Lelab (\s2 -> (s2l venv (p2h_sexp(macroexpander(h2p_sexp s)))))))
+                --         --Ddef name (Lpending (Lelab (\s2 -> (s2l venv (p2h_sexp(macroexpander(h2p_sexp s1)))))))
+                --         Ddef name (Lpending (Lelab (\s2 -> (s2l venv (p2h_sexp(macroexpander(h2p_sexp s1)))))))
+                --      _ -> error ("Pas un identifiant: " ++ show s1)))
 
-    --  case mmlookup venv v of
-    --      Nothing -> error ("Macro inconu")
-    --      Just (Vobj "macro" [Vfun (macroexpander)]) ->
-    --         Dpending (Delab  (\ e -> (s2d venv) (p2h_sexp(macroexpander (h2p_sexp e)  )) ))
-    --      _ -> error ("Pas un identifiant: " ++ show v) -- deux Dpending comme pour les autres ?
+-- Just (Vobj "macro" [Vfun (macroexpander)]) -> 
+--         Lpending (Lelab (\s2 -> 
+--             let resultat = macroexpander (h2p_sexp s2) in 
+--                 case resultat of
+--                     Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
+--                         Lpending (Lelab (\s3 -> (s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+--                     _ -> (s2l venv) (p2h_sexp(resultat ))   
+--         ))
 
-        -- Lpending (Lelab (\s2 -> (s2l venv) (p2h_sexp(macroexpander (h2p_sexp s2) )) )) 
-            
-            --            
-            --  Dpending (Delab (\ s ->
-            --          case s of
-            --            Ssym name ->
-            --              Dpending (Delab (\ e -> Ddef name (s2l venv e)))
-            --            _ -> error ("Pas un identifiant: " ++ show s)))
-
-                -- Dpending (Delab (\ s ->
-                --      case s of
-                --        Ssym name ->
-                --          Dpending (Delab (\ e -> Ddec name (s2t e)))
-                --        _ -> error ("Pas un identifiant: " ++ show s)))
 
 
 s2d venv (Scons s1 s2) =
