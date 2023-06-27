@@ -361,7 +361,7 @@ h2l venv Snil = Lpending (Lelab (h2l venv))
 --       _ -> s2l venv s
 
 h2l venv (s@(Ssym name)) =
-    case mmlookup venv (trace(show(name))name) of
+    case mmlookup venv name of--(trace(show(name))name) of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
 
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
@@ -412,35 +412,26 @@ s2d _venv (Ssym "dec") =
                        Ssym name ->
                          Dpending (Delab (\ e -> Ddec name (s2t e)))
                        _ -> error ("Pas un identifiant: " ++ show v)))
+            
 
-s2d venv (Ssym v) =  --error ("erro")
--- il faut faire un Lpending qui prends les prochains arguments, expand la macro, et apres fait le Ddef
--- le s1 c'est le name
--- mais s1 et les prochains arguments sont envoyes à l'expansion
-     case mmlookup venv v of
+
+s2d venv (Ssym v) =  
+ case mmlookup venv v of--(trace(show(v))v) of
          Nothing -> error ("Expression pas valide")
          Just (Vobj "macro" [Vfun (macroexpander)]) ->
-             Dpending (Delab (\s1 -> (s2d venv (p2h_sexp(macroexpander(h2p_sexp s1))))))
-                --  case (trace(show(s1)) s1) of
-                --      Ssym name -> 
-                --         --Ddef name (s2l venv (p2h_sexp(macroexpander(h2p_sexp s1))))--(Lpending (Lelab (\s2 -> (s2l venv (p2h_sexp(macroexpander(h2p_sexp s)))))))
-                --         --Ddef name (Lpending (Lelab (\s2 -> (s2l venv (p2h_sexp(macroexpander(h2p_sexp s1)))))))
-                --         Ddef name (Lpending (Lelab (\s2 -> (s2l venv (p2h_sexp(macroexpander(h2p_sexp s1)))))))
-                --      _ -> error ("Pas un identifiant: " ++ show s1)))
-
--- Just (Vobj "macro" [Vfun (macroexpander)]) -> 
---         Lpending (Lelab (\s2 -> 
---             let resultat = macroexpander (h2p_sexp s2) in 
---                 case resultat of
---                     Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
---                         Lpending (Lelab (\s3 -> (s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
---                     _ -> (s2l venv) (p2h_sexp(resultat ))   
---         ))
-
+            let 
+                traitementMoremacro val = 
+                    case val of --trace(show(val))val of
+                        Vobj "moremacro" [Vfun (macroexpander')] ->
+                            Dpending (Delab (\s3 -> 
+                                traitementMoremacro ( macroexpander' ( h2p_sexp s3 ))))
+                        _ ->( s2d venv ) ( p2h_sexp ( val ))
+            in 
+                Dpending (Delab (\ s2 -> traitementMoremacro (macroexpander (h2p_sexp s2))))
 
 
 s2d venv (Scons s1 s2) =
-    case s2d venv s1 of
+    case s2d venv s1 of--(trace(show(s1)) s1) of
       Dpending (Delab ef) -> ef s2
       _ -> error ("Argument en trop: " ++ show s2)
 s2d _ se = error ("Déclaration Psil inconnue: " ++ showSexp se)

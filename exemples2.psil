@@ -113,34 +113,34 @@
 ;(def r16 (and true false))
 
 ;; Bon, assez souffert, définissons une version minimale de backquote.
-(defmacro shorthand-backquote (e)
-  (if (not (cons? e))
-      (cons (cons nil 'shorthand-quote) e)
-    (let ((head (car e))
-          (tail (cdr e)))
-      ;; Essayons de reconnaître le cas où `e` est de la forme `,tail`
-      ;; i.e. `(shorthand-comma tail)` qu'on peut aussi écrire
+;(defmacro shorthand-backquote (e)
+;  (if (not (cons? e))
+;      (cons (cons nil 'shorthand-quote) e)
+;    (let ((head (car e))
+;          (tail (cdr e)))
+;      ;; Essayons de reconnaître le cas où `e` est de la forme `,tail`
+;      ;; i.e. `(shorthand-comma tail)` qu'on peut aussi écrire
       ;; `((() . shorthand-comma) . tail)`.
-      (if (and (and (cons? head) (nil? (car head)))
-               (and (sym? (cdr head))
-                    (str-eq? (sym-name (cdr head))
-                             ;; Psil n'a pas de encore de chaînes litérales.
-                             (sym-name 'shorthand-comma))))
+;      (if (and (and (cons? head) (nil? (car head)))
+;               (and (sym? (cdr head))
+;                    (str-eq? (sym-name (cdr head))
+;                             ;; Psil n'a pas de encore de chaînes litérales.
+;                             (sym-name 'shorthand-comma))))
           ;; `e` est de la forme `,tail`
-          tail
-        (cons (cons 'cons (cons 'shorthand-backquote head))
-              (cons 'shorthand-backquote tail))))))
+;          tail
+;        (cons (cons 'cons (cons 'shorthand-backquote head))
+;              (cons 'shorthand-backquote tail))))))
 
 ;; Vérifions sur une donnée "simple".
-(def r17 `(1 2 ,(num (+ 3 4)) 5))
+;(def r17 `(1 2 ,(num (+ 3 4)) 5))
 
 ;; Maintenant, utilisons le backquote pour définir `or`:
-(defmacro or (e1 e2)
+;(defmacro or (e1 e2)
   ;; C'est pas mal plus lisible que la définition de `and`.
-  `(: (if ,e1 true ,e2) Bool))
+ ; `(: (if ,e1 true ,e2) Bool))
 
 ;; Tests.
-(def r17 (or true false))
-(def r18 (or false false))
+;(def r17 (or true false))
+;(def r18 (or false false))
 
-(def r19 (let ((f (: (fun x (+ x 3)) (Int -> Int)))) f 6))
+(def r19 (let ((f (: (fun x (+ x 3)) (Int -> Int)))) f 6)) ; 9 : Tprim "Int"

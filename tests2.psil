@@ -1,39 +1,123 @@
-;; Tests Let
-;(def testLet1 (let ((x 1)) (+ x x)))
-;(def testLet2 (let ((x 1) (y 2)) (+ x y)))
-(def testLet3 (let ((x 1) (y 2) (z 3)) (+ (+ x y) z)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; FORMES SPÉCIALES - Expressions "fun"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def testLet4 (let ((x 1) (y (+ x 2)) (z 3)) (+ (+ x y) z))) ; 7 : Tprim "Int"
-; x=1, y = 3, z = 3 
+(dec f0 (Int -> Int))                           
+(def f0 (fun x (+ x 1)))                                    ; <Fonction> : Tarw (Tprim "Int") (Tprim "Int")
 
-(def testLet4 (let ((x 1) (y (+ x 2)) (z (+ y 2))) (+ (+ x y) z))) ; 7 : Tprim "Int"
-;  *** Exception: Argument manquant dans une macro ou forme spéciale
+(def f1 (: (fun x (+ x 1)) (Int -> Int)))                   ; <Fonction> : Tarw (Tprim "Int") (Tprim "Int")
 
+(dec f2 (Int Int -> Int))
+(def f2 (fun x (fun y (+ x y))))                            ; <Fonction> : Tarw (Tprim "Int") (Tarw (Tprim "Int") (Tprim "Int"))
 
-; semblable a un des exemples
-;(dec f (Int -> Int))
-;(def f (fun y (+ y 5)))                 ; ↝ <fonction> : Int -> Int
+(def f3 (: (fun x (fun y (+ x y))) (Int Int -> Int))) ;     ; <Fonction> : Tarw (Tprim "Int") (Tarw (Tprim "Int") (Tprim "Int"))
 
-;; Une macro triviale. (de exemples2.psil)
-;(def macro-id (macro (fun s s)))
-;(def cinq (macro-id 5))
+(def testF4 fun)                                                ; <FormeSpéciale-fun> : Tprim "SpecialForm"
+(def f4 (: (testF4 x (testF4 y (+ x y))) (Int Int -> Int)))     ; <Fonction> : Tarw (Tprim "Int") (Tarw (Tprim "Int") (Tprim "Int"))
 
-;; Macro moins triviale: `fun` avec arguments inversés! (de exemples2.psil)
-;(def revfun
-;     (macro (fun body (moremacro
-;                      (fun arg (cons (cons 'fun arg) body))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; FORMES SPÉCIALES - Expressions "if"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+(dec testIf1 Int)
+(def testIf1 (if true 1 0))             ; 1 : Tprim "Int"
 
-;;;; mon exemple avec if
-;(dec rif Int)
-;(def rif (if true 1 0))
+(dec testIf2 Int)
+(def testIf2 (if false 1 0))            ; 0 : Tprim "Int"
 
-;(dec testIf2 Int)
-;(def testIf2 (if false 0 1))
+(dec testIf3 Int)                       
+(def testIf3 (if (zero? 1) 0 1))        ; 1 : Tprim "Int"
 
-;(dec testIf3 Int)
-;(def testIf3 (if (zero? 1) 0 1))
+(def testIf4 if)                        ; <FormeSpéciale-if> : Tprim "SpecialForm"
+(dec if4 Int)
+(def if4 (testIf4 (zero? 1) 0 1234))    ; 1234 : Tprim "Int"
 
-;(def testMacroInc (macro (fun s (+ s 1))))
-;(def cinq (testMacroInc 4))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; FORMES SPÉCIALES - Expressions "Let"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def testLet1 (let ((x 1)) (+ x x)))                    ; 2 : Tprim "Int"
+(def testLet2 (let ((x 1) (y 2)) (+ x y)))              ; 3 : Tprim "Int"
+(def testLet3 (let ((x 1) (y 2) (z 3)) (+ (+ x y) z)))  ; 6 : Tprim "Int"
+;; (def testLet4 (let ((x 0)) (if (zero? x) 0 1)))                  ; *** Exception: Incapable de trouver le type de: Lif (Lapp (Lvar "zero?") (Lvar "x")) (Lnum 0) (Lnum 1)
+;; (def testLet4 (let ((x 0)) (:(if (zero? x) 0 1) ) Int -> Int))   ; *** Exception: Argument manquant dans une macro ou forme spéciale
+(def testLet5 (let ((x 1)) (f0 x)))                     ; 2 : Tprim "Int"
+(def testLet6 (let ((x 1) (y 2)) (f4 x y)))             ; 3 : Tprim "Int"
+(def testLet7 (let ((x 1) (w (let ((y 2) (z 3)) (+ y z)))) (f4 x w)))   ; 6 : Tprim "Int"
+(def testLet8 (let ((x 1) (y 2)) (let ((z 10)) (+ (+ x y) z))))         ; 13 : Tprim "Int"
+(def testLet4 (let ((x 1) (y (+ x 2)) (z (+ y 2))) (+ (+ x y) z))) ; 7 ou 9? : Tprim "Int"
+
+;; (def r19 (let ((f (: (fun x (fun y (+ x y))) (Int Int -> Int))) f 6 3))) ;; erreur *** Exception: Argument manquant dans une macro ou forme spéciale
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TESTS MACROS - Arguments
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (dec testFun (Int -> Int))
+;; (def testFun (fun x (+ x 1)))
+;; (def testFunTest (testFun 0))
+
+(def testMacroId (macro (fun s s)))
+(def idTrue (testMacroId (zero? 0)))
+(def deux   (testMacroId (+ 1 1)))
+(def trois  (testMacroId (let ((x 4) (y -1)) (+ x y))))
+(def quatre (f1 3))
+
+(def testMacroIdSndArg
+    (macro
+        (fun x
+            (moremacro
+                (fun y y)))))
+;(def snd1 (: (testMacroIdSndArg x y) (Int Int -> Int)))                             ; 2 : Tprim "Int"
+;(def snd1test (snd1 1 2))
+(def snd2 (testMacroIdSndArg (let ((x deux) (y -1)) (f2 x y)) (f2 testIf2 deux)))   ; 2 : Tprim "Int"
+
+ (def testMacroIdFstArg
+     (macro
+         (fun x
+             (moremacro
+                 (fun y x)))))
+ (def fst1 (testMacroIdFstArg 1 2))  
+
+(def fst1 (testMacroIdFstArg (let ((x deux) (y -1)) (f2 x y)) (f2 testIf2 deux))) ;  1 : Tprim "Int"
+
+;(def testMacroInc (macro (: (fun s (+ s 1)) (Int -> Int)))) ; *** Exception: Erreur de type: Tarw (Tprim "Sexp") (Tprim "Sexp") ≠ Tarw (Tprim "Int") (Tprim "Int")
+;; (def testMacroInc (macro (fun s (+ s 1)))) ; *** Exception: Erreur de type: Tprim "Int" ≠ Tprim "Sexp"
+;; (def inc (testMacroInc 99))  
+
+;; (def testMacroAdd3Args
+;;     (macro
+;;         (fun arg1
+;;             (moremacro
+;;                 (fun arg2
+;;                     (moremacro
+;;                         (fun arg3 (+ (+ arg1 arg2) arg3))))))))
+
+;; (dec add3Args (Int Int Int -> Int))                     
+;; (def add3Args (testMacroAdd3Args x y z))
+;; ;; (def Add3Args (testMacroAdd3Args 1 1 1))
+;; (def testAdd3Args (add3Args 1 1 1))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TESTS MACROS - Backquotes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (defmacro shorthand-backquote (e)
+;;   (if (not (cons? e))
+;;       (cons (cons nil 'shorthand-quote) e)
+;;     (let ((head (car e))
+;;           (tail (cdr e)))
+;;       (if (and (and (cons? head) (nil? (car head)))
+;;                (and (sym? (cdr head))
+;;                     (str-eq? (sym-name (cdr head))
+;;                              (sym-name 'shorthand-comma))))
+;;           tail
+;;         (cons (cons 'cons (cons 'shorthand-backquote head))
+;;               (cons 'shorthand-backquote tail))))))
+              
+;; (def testMacroIf 
+;;     (macro
+;;         (fun ec
+;;             (fun ev
+;;                 (fun ef '(if ,ec ,ev ,ef))))))
+;; (def MacroIf (testMacroIf (zero? 1) (- 1 1) (+ 1 0)))

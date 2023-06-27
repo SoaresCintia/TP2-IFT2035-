@@ -1,0 +1,39 @@
+;; Tests Let
+;(def testLet1 (let ((x 1)) (+ x x)))
+;(def testLet2 (let ((x 1) (y 2)) (+ x y)))
+(def testLet3 (let ((x 1) (y 2) (z 3)) (+ (+ x y) z)))
+
+(def testLet4 (let ((x 1) (y (+ x 2)) (z 3)) (+ (+ x y) z))) ; 7 : Tprim "Int"
+; x=1, y = 3, z = 3 
+
+(def testLet4 (let ((x 1) (y (+ x 2)) (z (+ y 2))) (+ (+ x y) z))) ; 7 : Tprim "Int"
+;  *** Exception: Argument manquant dans une macro ou forme spéciale
+
+
+; semblable a un des exemples
+;(dec f (Int -> Int))
+;(def f (fun y (+ y 5)))                 ; ↝ <fonction> : Int -> Int
+
+;; Une macro triviale. (de exemples2.psil)
+;(def macro-id (macro (fun s s)))
+;(def cinq (macro-id 5))
+
+;; Macro moins triviale: `fun` avec arguments inversés! (de exemples2.psil)
+;(def revfun
+;     (macro (fun body (moremacro
+;                      (fun arg (cons (cons 'fun arg) body))))))
+
+;(def r9 (: (revfun (+ x 7) x) (Int -> Int)))
+
+;;;; mon exemple avec if
+;(dec rif Int)
+;(def rif (if true 1 0))
+
+;(dec testIf2 Int)
+;(def testIf2 (if false 0 1))
+
+;(dec testIf3 Int)
+;(def testIf3 (if (zero? 1) 0 1))
+
+;(def testMacroInc (macro (fun s (+ s 1))))
+;(def cinq (testMacroInc 4))
