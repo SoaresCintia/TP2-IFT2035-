@@ -65,13 +65,45 @@
 ;;;;;;;;;;;; notre exemple : Une macro triviale avec defmacro
 ;(def macro-id (macro (fun s s)))
 ;(def cinq (macro-id 5))
-;(defmacro macro-idp (fun s s))
+
+
+;;;; ajouter cela dans les testes 
+(defmacro macro-idp (s) ( s ))
+
+(def trois (macro-idp 3))
+
+;(defmacro and (e1 e2);
+;  (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
 
 
 ;; Un `λ` à plusieurs arguments (curried).
 ;(defmacro λ (args body)
 ;  (multi-macro (args body) (cons (cons 'fun arg) body))
 ;)
+
+; 
+;; (defmacro lambda (args body)
+;;   (let ((argsHead (car args))
+;;     (let ((argsTail (cdr args)))
+;;       (if (nil? argsHead)     ;; s'il n'y a plus d'arguments
+;;         (cons nil body)       ;; alors retourner la fonction (cas de base)
+;;         (cons ('fun argsHead) '(defmacro lambda (argsTail body)))  
+;;         ;; Sinon, construire la fonction pour l'argument en cours et faire un appel récursif sur le reste des arguments
+;;        )))))
+
+; essayer un lambda avec un seul argument
+(defmacro lambda (arg body)
+  ( cons (cons 'fun arg) body)
+)
+
+(dec idpp ( Int -> Int))
+(def idpp (lambda x x))
+
+(def un (idpp 1))
+
+
+
+;(cons (cons 'multi-macro args) body)
 
 ;(defmacro λ (args body) 
 ;  (let ((head (car args))) 

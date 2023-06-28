@@ -39,7 +39,7 @@
 (def testLet1 (let ((x 1)) (+ x x)))                    ; 2 : Tprim "Int"
 (def testLet2 (let ((x 1) (y 2)) (+ x y)))              ; 3 : Tprim "Int"
 (def testLet3 (let ((x 1) (y 2) (z 3)) (+ (+ x y) z)))  ; 6 : Tprim "Int"
-;; (def testLet4 (let ((x 0)) (if (zero? x) 0 1)))                  ; *** Exception: Incapable de trouver le type de: Lif (Lapp (Lvar "zero?") (Lvar "x")) (Lnum 0) (Lnum 1)
+; (def testLet4 (let ((x 0)) (if (zero? x) 0 1)))                  ; *** Exception: Incapable de trouver le type de: Lif (Lapp (Lvar "zero?") (Lvar "x")) (Lnum 0) (Lnum 1)
 ;; (def testLet4 (let ((x 0)) (:(if (zero? x) 0 1) ) Int -> Int))   ; *** Exception: Argument manquant dans une macro ou forme spéciale
 (def testLet5 (let ((x 1)) (f0 x)))                     ; 2 : Tprim "Int"
 (def testLet6 (let ((x 1) (y 2)) (f4 x y)))             ; 3 : Tprim "Int"
@@ -67,7 +67,9 @@
     (macro
         (fun x
             (moremacro
-                (fun y y)))))
+                (fun y x)))))
+
+(def testSnd1 (testMacroIdSndArg 1 2))                  ;   2 : Tprim "Int"
 ;(def snd1 (: (testMacroIdSndArg x y) (Int Int -> Int)))                             ; 2 : Tprim "Int"
 ;(def snd1test (snd1 1 2))
 (def snd2 (testMacroIdSndArg (let ((x deux) (y -1)) (f2 x y)) (f2 testIf2 deux)))   ; 2 : Tprim "Int"
