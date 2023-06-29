@@ -42,12 +42,12 @@
      (macro (fun args
                  (moremacro
                   (fun body
-                       (let ((head (car args)))
-                         (let ((tail (cdr args)))
-                           (let ((tailfun (cons (cons 'fun tail) body)))
-                             (if (nil? head)
-                                 (cons 'macro tailfun)
-                               (cons (cons 'multi-macro head)
+                       (let ((head (car args))) ; liste sans le dernier arguments
+                         (let ((tail (cdr args))) ; dernier element
+                           (let ((tailfun (cons (cons 'fun tail) body))) ; fonction appliqué au dernier element
+                             (if (nil? head) ; regarde s'il n'y a plus d'argument à passer
+                                 (cons 'macro tailfun) ; retourne juste la fonction applique au dernier argument
+                                 (cons (cons 'multi-macro head) ; sinon, retourne la multi-macro avec la liste sans le dernier argument
                                      (cons 'moremacro tailfun)))))))))))   ;  <macro <Fonction>> : Tprim "Macro"
 
 ;; Une autre manière de (re)définir une macro équivalente à `fun`.
@@ -63,17 +63,13 @@
                                  (cons (cons 'multi-macro args) body))))    ;<macro <Fonction>> : Tprim "Macro"
 
 ;;;;;;;;;;;; notre exemple : Une macro triviale avec defmacro
-;(def macro-id (macro (fun s s)))
-;(def cinq (macro-id 5))
-
-
 ;;;; ajouter cela dans les testes 
 (defmacro macro-idp (s) ( s ))
 
 (def trois (macro-idp 3))
 
-;(defmacro and (e1 e2);
-;  (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
+(defmacro and (e1 e2);
+  (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
 
 
 ;; Un `λ` à plusieurs arguments (curried).
@@ -91,16 +87,112 @@
 ;;         ;; Sinon, construire la fonction pour l'argument en cours et faire un appel récursif sur le reste des arguments
 ;;        )))))
 
+
+
+; essayer un lambda avec deux arguments
+(defmacro lambda2 (arg1 arg2 body)
+  (cons (cons 'fun arg1) 
+      (cons (cons 'fun arg2) body)
+  )
+)
+
+(dec plus (Int Int -> Int))
+(def plus (lambda2 x y (+ x y)))
+(def r13 (plus 5 9))  ; 14 : Tprim "Int"
+
+
+
+; essayer un lambda avec deux arguments avec les arguments dans une liste
+(defmacro lambda2l ( args body)
+  (let ((arg1 (car args) ))
+    (let ((tail (cdr args)))
+      (let ((arg2 (car tail)))
+        (cons (cons 'fun arg1) 
+          (cons (cons 'fun arg2) body))
+    )
+  )
+))
+
+; je ne sais pas pourquoi, mais je l'impression que si la liste contient seulement 1
+; argument, la tête est vide et tail sera l'argumeent ?
+; avec cette hypothèse, considérons lambda2lp
+
+; on dirait que defmacro ne fonctionne pas pour des arguments en forme de liste
+
+(defmacro lambda2lp ( args body)
+  (let ((arg2 (cdr args) )) ; cdr va chercher le dernier élément de la liste y
+    (let ((tail (car args))) ; car retourne la liste sans le dernier élément (x)
+      (let ((arg1 (cdr tail))) ; x
+        (cons (cons 'fun arg1) 
+          (cons (cons 'fun arg2) body))
+    )
+  )
+))
+
+; cdr va chercher le dernier élément de la liste, et car retourne la liste sans le dernier élément.
+
+(dec plus2l (Int Int -> Int))
+(def plus2l (lambda2lp (x y) (+ x y)))
+;(def r21 (plus2l 20 1))  ; 21 : Tprim "Int"
+
+
+;(defmacro lambda (args body)
+;  (let ((head (car args))))
+;    (let ((tail (cdr args)))
+;        (if (nil? tail)
+;          (cons ( cons 'fun  head) body)
+;          (cons (cons 'lambda tail) body )
+;        )
+;      )
+;    )
+
+
+(dec testfun2 (Int Int -> Int))
+(def testfun2 (fun x (fun y (+ x y))))
+              ; (cons ( cons fun x) (cons fun y) body))
+(def dix (testfun2 5 5))
+
+
+
 ; essayer un lambda avec un seul argument
-(defmacro lambda (arg body)
+(defmacro lambda1 (arg body)
   ( cons (cons 'fun arg) body)
 )
 
-(dec idpp ( Int -> Int))
-(def idpp (lambda x x))
+;(dec idpp ( Int -> Int))
+;(def idpp (lambda1 x x))
 
-(def un (idpp 1))
+;(def un (idpp 1))
 
+
+;(dec plusOne (Int -> Int))
+;(def plusOne (lambda1 x (+ x 1)))
+;(def testPlusOne (plusOne 5))
+;;;
+
+; essayer un lambda avec un seul argument, mais avec l'argument dans une liste
+(defmacro lambda1l (arg body)
+  (let ((arg1 (car arg)))
+    ( cons (cons 'fun arg1) body)
+  )
+)
+
+;(dec idppl ( Int -> Int))
+;(def idppl (lambda1l (x)     x))
+; arg (x) 
+; body x
+; (arg1 (car arg)) ~ (arg1 x)
+; ( cons (cons 'fun arg1) body) ~ ( cons (cons 'fun x) x)
+
+;(def plus (λ        (x y) (+ x y)))
+
+;(def unl (idpp 1))
+
+
+;(dec plusOnel (Int -> Int))
+;(def plusOnel (lambda1l x (+ x 1)))
+;(def testPlusOnel (plusOnel 5))
+;;;
 
 
 ;(cons (cons 'multi-macro args) body)
