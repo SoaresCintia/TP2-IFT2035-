@@ -167,15 +167,22 @@
 (def macroIfAnd2 (macroIfAnd2Cnd (zero? 1) (zero? 0) (+ 1 0) (- 1 1)))
 
 ;; Macro if qui prend l'opposé de la condition et redonne le résultat approprié
-;;(defmacro macroOppositeIf (ec ev ef)
-;;  `(: (if (not ,ec) ,ev ,ef) Bool))
-;;(def macroOppositeIf (macroIfAnd2Cnd (zero? 1) (+ 1 0) (- 1 1)))
+(defmacro macroOppositeIfCnd (ec ev ef)
+  `(: (if (not ,ec) ,ev ,ef) Int))
+(def macroOppositeIf (macroOppositeIfCnd (zero? 1) (+ 1 0) (- 1 1)))
 
 ;; Macro de la fonction factorielle adaptée de 
 ;; l'exercice 8.11 du livre "The Common Lisp Companion" par Timothy Koschmann
-;;(defmacro testMacroFactorial (num)
-;;    (let ((n num)))
-;;        (if (zero? n)
-;;        1
-;;        '(* ,n (testMacroFactorial ,(- n 1)))))
+;(defmacro testMacroFactorial (num)
+;    (let ((n num))
+;        (if (zero? n)
+;        1
+;        `(* ,n (cons 'testMacroFactorial ,(- n 1))))))
+        
 ;;(def testMacroFactorial 5)
+
+;(defmacro or (e1 e2)
+  ;; C'est pas mal plus lisible que la définition de `and`.
+;  `(: (if ,e1 true ,e2) Bool))
+
+;; Ou exclusif
