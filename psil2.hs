@@ -519,8 +519,7 @@ synth tenv (Lapp e1 e2) =
       _ -> error ("Not a function: " ++ show e1)
 synth tenv (Llet x e1 e2) = synth (minsert tenv x (synth tenv e1)) e2
 -- ¡¡COMPLÉTER!!
-
-synth _tenv (Lquote (Vobj _st [_val])) = Tprim "Sexp"
+synth _tenv (Lquote _ ) = Tprim "Sexp"
 
 
 synth _tenv e = error ("Incapable de trouver le type de: " ++ (show e))
