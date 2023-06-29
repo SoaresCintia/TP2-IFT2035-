@@ -1,8 +1,0 @@
----------------------------------------------------------------------------
--- Fonction prise du document e2023-soln.hs
----------------------------------------------------------------------------
-
-
-(Scons (Scons Snil (Ssym "macro"))(Scons (Scons (Scons Snil (Ssym "fun")) (Ssym "s")) (Ssym "s")))
-
-[Ssym "macro",Scons (Scons (Scons Snil (Ssym "fun")) (Ssym "s")) (Ssym "s")]

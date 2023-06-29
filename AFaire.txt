@@ -1,3 +1,0 @@
-Regler h2l pour recevoir plus que 1 moremacro
-Essayer de voir si cela est utile dans s2d
-Tester la macro lambda ou la compléter 

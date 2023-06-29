@@ -73,19 +73,40 @@
 
 
 ;; Un `λ` à plusieurs arguments (curried).
-;(defmacro λ (args body)
-;  (multi-macro (args body) (cons (cons 'fun arg) body))
-;)
 
-; 
-;; (defmacro lambda (args body)
-;;   (let ((argsHead (car args))
-;;     (let ((argsTail (cdr args)))
-;;       (if (nil? argsHead)     ;; s'il n'y a plus d'arguments
-;;         (cons nil body)       ;; alors retourner la fonction (cas de base)
-;;         (cons ('fun argsHead) '(defmacro lambda (argsTail body)))  
-;;         ;; Sinon, construire la fonction pour l'argument en cours et faire un appel récursif sur le reste des arguments
-;;        )))))
+; avec 3 arguments
+;(cons (cons 'fun x)( cons (cons 'fun y) ( cons (cons 'fun z) body)))
+                                       ; body'    
+                   ; body'                     
+;(cons 'fun x) (cons 'fun y)
+                    ; ceci c'est comme body'                    
+;(cons (cons 'fun x) (cons 'fun y (+ x y)))
+
+(defmacro lambda (args body)
+  (let ((head (car args))) ; liste sans le dernier arguments
+    (let ((tail (cdr args))) ; dernier element
+        (let ((body-next (cons (cons 'fun tail ) body))) ; fonction appliqué au dernier element
+            (if (nil? head) ; regarde s'il n'y a plus d'argument à passer
+              body-next ; retourne juste la fonction applique au dernier argument
+              (cons(cons 'lambda head) body-next) ; sinon, retourne lambda-aux avec la liste sans le dernier argument
+            ))))
+            ) ; avec tailfun après
+
+;lambda (x y) (+ x y)
+;          head (x)
+;          tail y
+;          body-next (cons (cons 'fun y ) (+ x y))
+;(cons 'lambda (x) (cons (cons 'fun y ) (+ x y))) 
+;          head ()
+;          tail x
+;          body-next (cons (cons 'fun x ) (cons (cons 'fun y ) (+ x y)))
+;(cons (cons 'fun x ) (cons (cons 'fun y ) (+ x y)))
+
+
+
+(dec plus (Int Int -> Int))
+(def plus (lambda (x y) (+ x y)))
+(def r31 (plus 30 1))
 
 
 
@@ -96,30 +117,15 @@
   )
 )
 
-(dec plus (Int Int -> Int))
-(def plus (lambda2 x y (+ x y)))
-(def r13 (plus 5 9))  ; 14 : Tprim "Int"
+(dec plus2 (Int Int -> Int))
+(def plus2 (lambda2 x y (+ x y)))
+(def r13 (plus2 5 9))  ; 14 : Tprim "Int"
 
 
 
 ; essayer un lambda avec deux arguments avec les arguments dans une liste
+
 (defmacro lambda2l ( args body)
-  (let ((arg1 (car args) ))
-    (let ((tail (cdr args)))
-      (let ((arg2 (car tail)))
-        (cons (cons 'fun arg1) 
-          (cons (cons 'fun arg2) body))
-    )
-  )
-))
-
-; je ne sais pas pourquoi, mais je l'impression que si la liste contient seulement 1
-; argument, la tête est vide et tail sera l'argumeent ?
-; avec cette hypothèse, considérons lambda2lp
-
-; on dirait que defmacro ne fonctionne pas pour des arguments en forme de liste
-
-(defmacro lambda2lp ( args body)
   (let ((arg2 (cdr args) )) ; cdr va chercher le dernier élément de la liste y
     (let ((tail (car args))) ; car retourne la liste sans le dernier élément (x)
       (let ((arg1 (cdr tail))) ; x
@@ -132,24 +138,14 @@
 ; cdr va chercher le dernier élément de la liste, et car retourne la liste sans le dernier élément.
 
 (dec plus2l (Int Int -> Int))
-(def plus2l (lambda2lp (x y) (+ x y)))
-;(def r21 (plus2l 20 1))  ; 21 : Tprim "Int"
-
-
-;(defmacro lambda (args body)
-;  (let ((head (car args))))
-;    (let ((tail (cdr args)))
-;        (if (nil? tail)
-;          (cons ( cons 'fun  head) body)
-;          (cons (cons 'lambda tail) body )
-;        )
-;      )
-;    )
+(def plus2l (lambda2l (x y) (+ x y)))
+(def r21 (plus2l 20 1))  ; 21 : Tprim "Int"
 
 
 (dec testfun2 (Int Int -> Int))
 (def testfun2 (fun x (fun y (+ x y))))
-              ; (cons ( cons fun x) (cons fun y) body))
+              ;(cons ( cons fun x) (cons fun y) body))
+              ;(cons ( cons fun x) (cons fun y body))
 (def dix (testfun2 5 5))
 
 
@@ -195,16 +191,6 @@
 ;;;
 
 
-;(cons (cons 'multi-macro args) body)
-
-;(defmacro λ (args body) 
-;  (let ((head (car args))) 
-;    (let ((tail (cdr args)))
-;      (let ((tailfun (cons (cons 'fun tail) body)))
-;        (if (nil? head)
-;  )
-;))))
-
 
 
 ;(dec plus (Int Int -> Int))
@@ -215,48 +201,48 @@
 ;; par macroexpansion plutôt que de le définir directement dans le code Haskell.
 ;; Pour commencer, il faudrait sauvegarder le `let` original sous un autre nom
 ;; pour pouvoir l'utiliser dans l'expansion du nouveau `let`.
-;;(def let1 let)
-;;(defmacro let (decls body)
-;;  (if (cons? decls)
-;;      (cons (cons 'let (car decls))
-;;            (cons (cons 'let1 (cons nil (cdr decls))) body))
-;;    body))
+(def let1 let)
+(defmacro let (decls body)
+  (if (cons? decls)
+      (cons (cons 'let (car decls))
+            (cons (cons 'let1 (cons nil (cdr decls))) body))
+    body))
 
 (def r14 (let ((x 4)
                (y (+ x 6))
                (z (* x y)))
            (+ z x)))                                ;   44 : Tprim "Int"
 
-;(dec not (Bool -> Bool))
-;(def not (λ (x) (if x false true)))
+(dec not (Bool -> Bool))
+(def not (lambda (x) (if x false true)))
 
 (defmacro and (e1 e2)
   (cons (cons ': (cons (cons (cons 'if e1) e2) 'false)) 'Bool))
 
-;(def r15 (and true true))
-;(def r16 (and true false))
+(def r15 (and true true))
+(def r16 (and true false))
 
 ;; Bon, assez souffert, définissons une version minimale de backquote.
-;(defmacro shorthand-backquote (e)
-;  (if (not (cons? e))
-;      (cons (cons nil 'shorthand-quote) e)
-;    (let ((head (car e))
-;          (tail (cdr e)))
-;      ;; Essayons de reconnaître le cas où `e` est de la forme `,tail`
-;      ;; i.e. `(shorthand-comma tail)` qu'on peut aussi écrire
+(defmacro shorthand-backquote (e)
+  (if (not (cons? e))
+      (cons (cons nil 'shorthand-quote) e)
+    (let ((head (car e))
+          (tail (cdr e)))
+      ;; Essayons de reconnaître le cas où `e` est de la forme `,tail`
+      ;; i.e. `(shorthand-comma tail)` qu'on peut aussi écrire
       ;; `((() . shorthand-comma) . tail)`.
-;      (if (and (and (cons? head) (nil? (car head)))
-;               (and (sym? (cdr head))
-;                    (str-eq? (sym-name (cdr head))
-;                             ;; Psil n'a pas de encore de chaînes litérales.
-;                             (sym-name 'shorthand-comma))))
+      (if (and (and (cons? head) (nil? (car head)))
+               (and (sym? (cdr head))
+                    (str-eq? (sym-name (cdr head))
+                             ;; Psil n'a pas de encore de chaînes litérales.
+                             (sym-name 'shorthand-comma))))
           ;; `e` est de la forme `,tail`
-;          tail
-;        (cons (cons 'cons (cons 'shorthand-backquote head))
-;              (cons 'shorthand-backquote tail))))))
+          tail
+        (cons (cons 'cons (cons 'shorthand-backquote head))
+              (cons 'shorthand-backquote tail))))))
 
 ;; Vérifions sur une donnée "simple".
-;(def r17 `(1 2 ,(num (+ 3 4)) 5))
+(def r17 `(1 2 ,(num (+ 3 4)) 5))
 
 ;; Maintenant, utilisons le backquote pour définir `or`:
 ;(defmacro or (e1 e2)
