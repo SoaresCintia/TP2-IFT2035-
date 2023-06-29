@@ -1,3 +1,7 @@
+-- 29 juin 2023
+-- Auteurs: Cintia Dalila Soares - C2791
+--          Carl Thibault - 0985781
+
 -- TP-1  --- Implantation d'une sorte de Lisp          -*- coding: utf-8 -*-
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
