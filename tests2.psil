@@ -153,12 +153,11 @@
 (def r11 (: (myfun3 x y (+ x y)) (Int Int -> Int)))
 (def r12 (r11 11 1))
 
-;; (def myfun3 (multi-macro (arg body) (cons (cons 'fun arg) body)))
-;; (def r11 (: (myfun3 x (+ x 3)) (Int -> Int)))
-;; (def r12 (r11 2)) ; 5 : Tprim "Int"
+(defmacro twoArgsFun (argOne argTwo body)
+    (cons (cons 'fun argOne) (cons (cons 'fun argTwo) body)))
 
-;;(defmacro twoArgsFun (argOne argTwo body)
-;;    '(fun argOne argTwo body))
+(def r13 (: (twoArgsFun x y (- x y)) (Int Int -> Int)))
+(def r14 (r13 15 1))
 
 ;; Un "if" qui prend 2 conditions en arguments et retourne ev si 
 ;; les 2 conditions sont vraies sinon renvoie ef
