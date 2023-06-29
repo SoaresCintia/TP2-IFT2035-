@@ -332,8 +332,8 @@ sf_let venv sexp =
                       Llet y (s2l env e) (sf_let' env res ePending) 
                 
     in 
-        case sexp2list sexp of
-            [] -> error ("Il n'y a pas de déclaration dans let") 
+        case sexp2list sexp  of
+            [Snil] -> Lpending (Lelab (\e2 -> (s2l venv e2))) 
             (Scons (Scons Snil (Ssym x)) e) : res ->
                 Lpending (Lelab (\e2 -> Llet x (s2l venv e) (sf_let' venv res (s2l venv e2)) ))
 

@@ -84,12 +84,12 @@
 ;; par macroexpansion plutôt que de le définir directement dans le code Haskell.
 ;; Pour commencer, il faudrait sauvegarder le `let` original sous un autre nom
 ;; pour pouvoir l'utiliser dans l'expansion du nouveau `let`.
-;;(def let1 let)
-;;(defmacro let (decls body)
-;;  (if (cons? decls)
-;;      (cons (cons 'let (car decls))
-;;            (cons (cons 'let1 (cons nil (cdr decls))) body))
-;;    body))
+(def let1 let)
+(defmacro let (decls body)
+  (if (cons? decls)
+      (cons (cons 'let (car decls))
+            (cons (cons 'let1 (cons nil (cdr decls))) body))
+    body))
 
 (def r14 (let ((x 4)
                (y (+ x 6))
