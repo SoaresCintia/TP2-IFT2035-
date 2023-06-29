@@ -127,7 +127,7 @@
               body-next 
               (cons(cons 'lambda head) body-next) 
             ))))
-            ) ; avec tailfun après
+            ) 
 
 ;; Fonction auxiliaires importées de "exemples 2" ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
