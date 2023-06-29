@@ -87,13 +87,18 @@
 (def testInc (testFunInc 99))
 
 ;; Macro fonction à 2 arguments avec moremacro (ERREUR)
-;; (def twoArgsFun
-;;      (macro (fun argOne 
-;;         (moremacro (fun argTwo 
-;;             (moremacro (fun body 
-;;                         (cons (cons (cons 'fun argOne) argTwo) body))))))))
-;; (def testFunAdd (: (twoArgsFun x y (+ x y)) (Int Int -> Int)))
-;; (def testAdd (testFunAdd 100 1))
+ (def twoArgsFun
+      (macro (fun argOne 
+         (moremacro (fun argTwo 
+             (moremacro (fun body 
+                         (cons (cons 'fun argOne) (cons (cons 'fun argTwo) body)))))))))
+ (def testFunAdd (: (twoArgsFun x y (+ x y)) (Int Int -> Int)))
+ (def testAdd (testFunAdd 100 1))                 ; ↝  101 : Int
+
+
+ (def revfun
+     (macro (fun body (moremacro
+                      (fun arg (cons (cons 'fun arg) body))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TESTS MACROS

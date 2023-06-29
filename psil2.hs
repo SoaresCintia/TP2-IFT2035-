@@ -31,7 +31,6 @@
 import Text.ParserCombinators.Parsec -- Bibliothèque d'analyse syntaxique.
 import Data.Char                -- Conversion de Chars de/vers Int et autres.
 import System.IO                -- Pour stdout, hPutStr
-import Debug.Trace
 
 ---------------------------------------------------------------------------
 -- 1ère représentation interne des expressions de notre language         --
@@ -316,10 +315,9 @@ sf_fun _ x = error ("devrait être un identifiant: " ++ showSexp x)
 
 sf_if :: SpecialForm
 sf_if venv ec =  --error "¡¡COMPLÉTER!! sf_if"
-    -- il faut envoyer un argument a la fois
-    -- car Lelab prends attends juste un Sexp, pas deux
-    -- ceci complile, mais pas encore teste
-    Lpending (Lelab (\ ev -> Lpending (Lelab ( \ef -> Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
+    Lpending (Lelab (\ ev -> 
+        Lpending (Lelab ( \ef -> 
+            Lif (s2l venv ec) (s2l venv ev)(s2l venv ef) ))))
 
 sf_let :: SpecialForm
 
@@ -335,7 +333,8 @@ sf_let venv sexp =
         case sexp2list sexp  of
             [Snil] -> Lpending (Lelab (\e2 -> (s2l venv e2))) 
             (Scons (Scons Snil (Ssym x)) e) : res ->
-                Lpending (Lelab (\e2 -> Llet x (s2l venv e) (sf_let' venv res (s2l venv e2)) ))
+                Lpending (Lelab (\e2 -> 
+                    Llet x (s2l venv e) (sf_let' venv res (s2l venv e2)) ))
 
 sf_quote :: SpecialForm
 sf_quote _venv s = Lquote (h2p_sexp s)
@@ -350,42 +349,30 @@ sf_quote _venv s = Lquote (h2p_sexp s)
 h2l :: VEnv -> Sexp -> Lexp
 h2l venv Snil = Lpending (Lelab (h2l venv))
 
--- h2l venv (s@(Ssym name)) =
---     case mmlookup venv name of
---       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
-
---       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
---         Lpending (Lelab (\s2 -> 
---             let resultat = macroexpander (h2p_sexp s2) in 
---                 case resultat of
---                     Vobj "moremacro" [Vfun (macroexpander')] -> -- ceci gere le cas d'un macro, il faut faire le cas pour plusieurs macros
---                         Lpending (Lelab (\s3 -> (s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
---                     _ -> (s2l venv) (p2h_sexp(resultat ))   
---         ))
---       _ -> s2l venv s
-
 h2l venv (s@(Ssym name)) =
-    case mmlookup venv name of--(trace(show(name))name) of
+    case mmlookup venv name of
       Just (Vsf _ sf) -> Lpending (Lelab (sf venv))
 
       Just (Vobj "macro" [Vfun (macroexpander)]) -> 
-        -- definir une fonction local tel que si le resultat de l'expansion c'est un
-        -- moremacro, faire un traitement, sinon, faire un autre
+       
         let 
             traitementMoremacro val = 
                 case val of
                     Vobj "moremacro" [Vfun (macroexpander')] -> 
-                        Lpending (Lelab (\s3 -> traitementMoremacro (macroexpander' (h2p_sexp s3 ))))
-                            --(s2l venv) (p2h_sexp(macroexpander' (h2p_sexp s3 )))))
+                        Lpending (Lelab (\s3 -> 
+                            traitementMoremacro (macroexpander' (h2p_sexp s3 ))
+                            ))
+                            
                     _ -> (s2l venv) (p2h_sexp val ) 
         in
-            Lpending (Lelab (\s2 -> traitementMoremacro (macroexpander (h2p_sexp s2))
+            Lpending (Lelab (\s2 -> 
+                traitementMoremacro (macroexpander (h2p_sexp s2))
         ))
       _ -> s2l venv s
 
 
 h2l venv (Scons s1 s2) =
-    case h2l venv s1 of--trace (show (h2l venv s1)) $ h2l venv s1 of
+    case h2l venv s1 of
       Lpending (Lelab ef) -> ef s2
       _ -> Lapp (s2l venv s1) (s2l venv s2)
 h2l venv s = s2l venv s
@@ -395,7 +382,7 @@ s2l :: VEnv -> Sexp -> Lexp
 s2l _ (Snum n) = Lnum n
 s2l _ (Ssym s) = Lvar s
 s2l venv (s@(Scons _ _)) =
-    case h2l venv s of--trace (show (h2l venv s)) $ h2l venv s of
+    case h2l venv s of
       Lpending _ -> error ("Argument manquant dans une macro ou forme spéciale")
       le -> le
 s2l _ se = error ("Expression Psil inconnue: " ++ (showSexp se))
@@ -420,22 +407,24 @@ s2d _venv (Ssym "dec") =
 
 
 s2d venv (Ssym v) =  
- case mmlookup venv v of--(trace(show(v))v) of
-         Nothing -> error ("Expression pas valide")
-         Just (Vobj "macro" [Vfun (macroexpander)]) ->
-            let 
-                traitementMoremacro val = 
-                    case val of --trace(show(val))val of
-                        Vobj "moremacro" [Vfun (macroexpander')] ->
-                            Dpending (Delab (\s3 -> 
-                                traitementMoremacro ( macroexpander' ( h2p_sexp s3 ))))
-                        _ ->( s2d venv ) ( p2h_sexp ( val ))
-            in 
-                Dpending (Delab (\ s2 -> traitementMoremacro (macroexpander (h2p_sexp s2))))
+ case mmlookup venv v of
+    Nothing -> error ("Expression pas valide")
+    Just (Vobj "macro" [Vfun (macroexpander)]) ->
+        let 
+            traitementMoremacro val = 
+                case val of 
+                    Vobj "moremacro" [Vfun (macroexpander')] ->
+                        Dpending (Delab (\s3 -> 
+                            traitementMoremacro (macroexpander' ( h2p_sexp s3 ))
+                            ))
+                    _ ->( s2d venv ) ( p2h_sexp ( val ))
+        in 
+            Dpending (Delab (\ s2 -> 
+                traitementMoremacro (macroexpander (h2p_sexp s2))))
 
 
 s2d venv (Scons s1 s2) =
-    case s2d venv s1 of--(trace(show(s1)) s1) of
+    case s2d venv s1 of
       Dpending (Delab ef) -> ef s2
       _ -> error ("Argument en trop: " ++ show s2)
 s2d _ se = error ("Déclaration Psil inconnue: " ++ showSexp se)
@@ -460,35 +449,16 @@ check tenv (Lif ec ev ef) t =
         evT = check tenv ev t
         efT = check tenv ef t
     in
-        if (ecT == Nothing)then (--trace(show(ecT == Nothing))$(ecT == Nothing)) then (
+        if (ecT == Nothing)then (
             if (evT == Nothing) then (
                 efT
             ) else evT
         ) else ecT
-        -- if (ecT == Nothing) && (evT == Nothing) && (efT == Nothing) then Nothing
-        -- else Just ("Erreur de type dans Lif.")
-
--- est-ce qu'il faut séparer en cas ? comment faire une Lexp qui n'as pas de déclaration ?
--- je pense que le cas de base va aller dans le check défaut ?
-
--- check tenv (Llet x1 e1 ef) t = --error ("Completer check de Llet")
---     -- synthétiser le type de 
---     case ef of
---         -- synthétiser le type de e1 : t1   
---         -- dans l'environement auquel on a ajouté (x1,t1) on check le type de Llet :
---         Llet x2 e2 ef' -> 
---             let 
---                 t1 = synth tenv e1 
---             in
---                 check (minsert tenv x1 t1) ef t 
-
---         -- synthétiser le type de e1 : t1   
---         -- dans l'environement auquel on a ajouté (x1,t1) on check le type de ef
---         _-> 
+        
 
 check tenv (Llet x1 e1 ef) t = 
         -- synthétiser le type de e1 : t1   
-        -- dans l'environement auquel on a ajouté (x1,t1) on check le type de ef
+        -- dans l'environement qu'on ajoute (x1,t1), on vérifie le type de ef
         let 
             t1 = synth tenv e1 
         in
@@ -497,12 +467,10 @@ check tenv (Llet x1 e1 ef) t =
 check tenv e t
   -- Essaie d'inférer le type et vérifie alors s'il correspond au
   -- type attendu.
-  = let t' = synth tenv e--(trace(show(e)) e)
-    in if t == t' then Nothing -- trace(show(t == t'))$
+  = let t' = synth tenv e
+    in if t == t' then Nothing
        else Just ("Erreur de type: " ++ show t ++ " ≠ " ++ show t')
 
--- t c'est le type souhaité
--- t' c'esst le type trouvé
 
 
 -- `synth Γ e` vérifie que `e` est typé correctement et ensuite "synthétise"
@@ -661,10 +629,9 @@ eval venv (Llet x e1 e2) = eval (minsert venv x (eval venv e1)) e2
 eval venv (Lfun x e) = Vfun (\ v -> eval (minsert venv x v) e)
 eval _ (Lpending e) = error ("Expression incomplète: " ++ show e)
 -- ¡¡COMPLÉTER!! 
-eval _venv (Lquote val) = --trace ( show (h2p_sexp (  p2h_sexp val))) $ h2p_sexp (  p2h_sexp val) -- <sym "fun">
-       val -- <sym "fun">
-    --trace ( show ( eval venv (  p2h_sexp val))) $ eval venv (  p2h_sexp val) -- <sym "fun">
-
+eval _venv (Lquote val) = 
+       val 
+    
 eval venv (Lif ec ev ef) = 
     let valOfec = eval venv ec in
         case valOfec of
