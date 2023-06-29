@@ -159,11 +159,12 @@
 (def r13 (: (twoArgsFun x y (- x y)) (Int Int -> Int)))
 (def r14 (r13 15 1))
 
-;; Un "if" qui prend 2 conditions en arguments et retourne ev si 
-;; les 2 conditions sont vraies sinon renvoie ef
-;;(defmacro macroIfAnd2Cnd (ec1 ec2 ev ef)
-;;  `(: (if (and ,ec1 ,ec2) ,ev ,ef) Bool))
-;;(def macroIfAnd2 (macroIfAnd2Cnd (zero? 1) (zero? 0) (+ 1 0) (- 1 1)))
+;; Un "if" qui prend 2 conditions en arguments et retourne ev (Int) si 
+;; les 2 conditions sont vraies sinon renvoie ef (Int)
+(defmacro macroIfAnd2Cnd (ec1 ec2 ev ef)
+  `(: (if (and ,ec1 ,ec2) ,ev ,ef) Int))
+
+(def macroIfAnd2 (macroIfAnd2Cnd (zero? 1) (zero? 0) (+ 1 0) (- 1 1)))
 
 ;; Macro if qui prend l'opposé de la condition et redonne le résultat approprié
 ;;(defmacro macroOppositeIf (ec ev ef)
