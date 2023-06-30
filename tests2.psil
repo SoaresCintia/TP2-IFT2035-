@@ -2,9 +2,9 @@
 ;; Auteurs: Cintia Dalila Soares - C2791
 ;;          Carl Thibault - 0985781
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FORMES SPÉCIALES - Expressions "fun"
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (dec f0 (Int -> Int))                           
 (def f0 (fun x (+ x 1)))                            ; ↝ <Fonction> : Int -> Int
@@ -21,9 +21,9 @@
 (def f4 (: (testF4 x (testF4 y (+ x y))) (Int Int -> Int))) ; ↝ <Fonction> : 
                                                             ;   Int Int -> Int
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FORMES SPÉCIALES - Expressions "if"
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (dec testIf1 Int)
 (def testIf1 (if true 1 0))             ; ↝ 1 : Int
@@ -52,9 +52,9 @@
 (def testLet4 (let ((x 1) (y (+ x 2)) (z (+ y 2))) (+ (+ x y) z)))  ; ↝ 9 : Int
 (def testLet9 (let (()) 9))                                   ; ↝ 9 : Int
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TESTS MACROS - Arguments et moremacro
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; MacroId avec différentes sortes d'expressions
 (def testMacroId (macro (fun s s)))
@@ -91,7 +91,7 @@
       (macro (fun argOne 
          (moremacro (fun argTwo 
              (moremacro (fun body 
-                         (cons (cons 'fun argOne) (cons (cons 'fun argTwo) body)))))))))
+                (cons (cons 'fun argOne) (cons (cons 'fun argTwo) body)))))))))
  (def testFunAdd (: (twoArgsFun x y (+ x y)) (Int Int -> Int)))
  (def testAdd (testFunAdd 100 1))                 ; ↝  101 : Int
 
@@ -187,34 +187,6 @@
   `(: (if (not ,ec) ,ev ,ef) Int))
 (def macroOppositeIf (macroOppositeIfCnd (zero? 1) (+ 1 0) (- 1 1)))
 
-; Macro simple avec shorthand-backquote 
-
-(defmacro mult (n)
-    (`(: (fun x (* x,n)) (Int -> Int))
-    ) 
-)
-
-(def testMult (mult 3))
-(def douze (testMult 4))
-
-; Macro simple soustraction
-(defmacro sous (n) `(: (fun x (- x ,n)) (Int -> Int)))
-
-(def sousTest (sous 10))
-(def vingt (sousTest 30))
-
-;; Macro de la fonction factorielle adaptée de 
-;; l'exercice 8.11 du livre "The Common Lisp Companion" par Timothy Koschmann
-;(defmacro testMacroFactorial (num)
-;    (let ((n num))
-;        `( 
-;            (if (zero? ,n)
-;                1
-;                (* ,n (cons 'testMacroFactorial ,(- n 1)))))))
-;            (mult ,n) (testMacroFactorial ( (sous ,n) 1) )))))
-
-;(def testMacroFactorial 5)
-
 ;; Macro auxiliaire importée de "exemples 2" ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro or (e1 e2)
@@ -236,3 +208,30 @@
 
 (def xorTest4 ( xor false false)) ; ↝ 0 : Bool
 
+
+;; Macro simple avec shorthand-backquote 
+
+(defmacro mult (n)
+    (`(: (fun x (* x,n)) (Int -> Int))
+    ) 
+)
+
+(def testMult (mult 3))
+(def douze (testMult 4))
+
+;; Macro simple soustraction
+
+(defmacro sous (n) `(: (fun x (- x ,n)) (Int -> Int)))
+
+(def mUn (sous 1))
+(def vingt (mUn 21))                                     ; ↝ 20 : Int
+
+;; Macro de la fonction factorielle adaptée de 
+;; l'exercice 8.11 du livre "The Common Lisp Companion" par Timothy Koschmann
+;(defmacro testMacroFactorial (numero)
+;    (let ((n numero))
+;        (if (zero? n)
+;        1
+;        `(* n (testMacroFactorial ,(- n 1))))))
+
+;(def fac5 (testMacroFactorial 5))
