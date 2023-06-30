@@ -1,0 +1,92 @@
+ % Auteurs: Cintia Dalila Soares - C2791
+ %          Carl Thibault - 0985781
+
+
+ \documentclass[11pt, letterpaper]{article}
+ \usepackage{amsmath}
+ \usepackage{amssymb}
+ \usepackage{listings}
+ \usepackage{hyperref}
+ 
+ \title{IFT2035 - TP2}
+ \author{Cintia Dalila Soares - C2791\\
+  Carl Thibault - p0985781}
+ \date{27 juin 2023}
+ 
+ \begin{document}
+ 
+ \maketitle
+ 
+ %---------------------------------------------------------------------------
+ 
+ % \begin{itemize}
+ %     \item Y a-t-il des portions du travail qui vous ont pris beaucoup de temps ou et de réflexion, ou qui ont été difficiles à comprendre ?\\
+ 
+ %     \item Quels obstacles avez-vous rencontrés pendant l'écriture du code, par exemple pour implanter la récursivité ou pour parser les types de fonctions ?\\
+ 
+ %     \item Si vous avez hésité à certains moments sur l'interprétation à donner à une portion de l'énoncé, ou sur une choix d'implémentation, qu'avez-vous fini par faire, et pourquoi ?\\
+ 
+ %     \item Si vous n'avez pas eu le temps de tout compléter, avez-vous quand même une idée (peut-être partielle) de comment vous auriez pu coder les fonctionnalités manquantes ?\\
+ 
+ %     \item Si vous avez modifié le code fourni (je vous rappelle que ce n'est pas recommandé !), pourquoi en avez-vous senti le besoin ?\\
+ 
+ % \end{itemize}
+ 
+ \section{Compréhension de l'énoncé}
+ 
+ Le TP2 commençant là où le TP1 nous a laissés, la compréhension de l'énoncé nous paraissait de prime abord moins intimidante. Les 2 coéquipiers étant en période de préparation d'examens aux débuts du TP et étant serrés dans le temps, nous avons fait le choix stratégique de commencer le TP2 après le passage de ceux-ci.\\
+ 
+ Cette première impression était trompeuse, car le TP2 était finalement beaucoup plus difficile. L'énoncé étant somme toute assez simple à comprendre suite à nos déboires avec le TP1, le travail à accomplir quant à lui n'a pas reflété notre expérience avec le TP1 pour lequel nous étions beaucoup mieux outillé avec les différentes démos s'y rapportant.\\ 
+ 
+ Bien que l'on comprend le fonctionnement des macros et de leur expansion, la façon dont ils sont formalisés dans le code est un peu différente et finalement plus difficile à comprendre aux premiers abords. \\
+ 
+ Lors d'une première lecture du code fourni, on remarque l'introduction de nouveaux types Haskell requis pour le traitement des macros qui ont également demandé une période d'adaptation pour les comprendre.\\
+ 
+ \section{Processus de programmation et problématiques rencontrées}
+ 
+ \subsection{L'importance cruciale du "pair programming" (partie II)} 
+ De façon similaire au TP1, le fait de travailler en équipe sur ce travail aura été très bénéfique. Nos échanges quant au TP nous donnaient souvent une meilleure compréhension des parties qu'on comprenait moins bien. De plus, chaque coéquipier ayant des forces et faiblesses complémentaires quant à notre compréhension du TP, nous avons pu ainsi progresser efficacement sur les différentes parties du travail à effectuer.
+ 
+ \subsection{Comprendre les interactions entre les parties du code} 
+ Globablement, l'intégration de fonctionnalités (en partant du TP1) ajoutait assurément une couche de complexité quant à l'interaction entre les différentes parties du code.\\
+ 
+ Il a été plutôt difficile de comprendre comment chaque fonction était utilisée et les compositions de fonction / types qu'on devait faire. Grâce au typage fourni, il s'agissait en quelque sorte d'un travail de déduction en analysant les types en input et en output pour les fonctions à compléter. C'est à se demander si sans le typage intransigeant de Haskell il aurait été possible de comprendre comment progresser dans le TP..! Le tout nous a fait penser à une chasse au trésor et le typage fourni était ici définitivement une aide à la compréhension.
+ 
+ \subsection{Fonction "h2l"} 
+ Un des premiers obstacles rencontrés fut la complétion de la fonction "h2l" dans le cas d'une macro avec un seul argument. Nous avons essayé plusieurs stratégies, avant de réaliser que l'utilisation d'une composition de fonctions donnait le résultat escompté. Dans ce cas-ci les règles de typage de la fonction nous auront entre autres guidés en plus de certains messages dans le forum parlant des fonctions "h2p\_sexp" et "p2h\_sexp". Ensuite, un autre défi aura été de traiter le cas où "h2l" recevait un "moremacro" et cette partie du TP nous a pris considérablement plus de temps que le restant et nous avons débouché à une solution suite à des discussions avec les auxiliaires d'enseignement.
+ 
+ \subsection{Définition des expressions "Let"} 
+ Traiter les expressions "Let" avec plusieurs déclarations du genre
+ \begin{equation}\label{letLisp}
+  \mbox{ let } ((x_1 \; e_1) \; (x_2 \; e_2) \ldots (x_n \; e_n)) \; e_f
+ \end{equation}
+ aura également un défi pour nous. La première étape c'était de réaliser que l'expression (\ref{letLisp})
+ devrait se traduire par un "Let" imbriqué, comme suit :
+ \begin{equation*}
+  \mbox{ let } x_1 \; e_1 ( \mbox{ let } x_2 \; e_2 ( \ldots (x_n \; e_n))\; e_f).
+ \end{equation*}
+ Ensuite, nous avons eu besoin d'un moment pour bien comprendre comment l'argument de l'expression "Lpending" devrait être propagé jusqu'à la dernière déclaration.
+ 
+ \subsection{Définition des macros et syntaxe Psil} 
+ Les premières définitions de macros à un seul argument ont été possibles à implémenter assez rapidement. Cependant, la définition des macros à plusieurs arguments avec "moremacro" nous a donné plus de fil à retordre dans la compréhension de leur syntaxe. Parfois, on se demandait si le problème était plutôt dans notre implémentation du côté de Haskell ou dans notre code Psil. Plus d'exemples nous auraient probablement été utiles.\\ 
+ L'introduction de la définition requise pour la construction des "defmacro" nous a cependant rapprochés d'un territoire plus familier. L'élaboration des tests devançait parfois notre implémentation en Haskell, ce qui nous laissait parfois dans l'incertitude d'avoir bien compris le fonctionnement des macros Psil. En général, nous avons eu beaucoup de difficulté à traduire nos idées en macros et la syntaxe appropriée reste parfois un mystère.
+ 
+ \subsection{Defmacro "lambda" psil} 
+ La définition de la defmacro "lambda" en psil dans "exemples2.psil" nous a également donné du fil à retordre. La construction des expressions avec les "cons" n'était pas très intuitive. Une question aux auxiliaires d'enseignement nous aura permis de comprendre que les "car" et "cdr" en psil ne fonctionnent pas tout à fait de la même façon qu'en lisp et cette information nous a débloqué.
+ 
+ \subsection{Programmation fonctionnelle (partie II)}
+ Le TP1 nous avait confrontés à un nouveau langage et paradigme de programmation et nous aura préparé pour le TP2. Le TP2 nous a quant à lui amenés dans d'autres recoins de Haskell et aura vraiment repoussé nos limites en termes de programmation fonctionnelle.
+ 
+ \section{Conclusions}
+ \subsection{Dernières impressions}
+ Le TP2 nous aura semblé beaucoup plus difficile que le TP1 pour lequel nous étions mieux outillé pour l'accomplir avec les diverses démonstrations pertinentes dans la première moitié du cours. À cause de la fin de session / mi-session combinée, l'extension de la date de remise nous aura permis de mieux compléter le TP dans son ensemble.\\
+ 
+ Peut-être que plus d'explications sur le fonctionnement concret de certaines parties du code nous auraient aidés à mieux progresser dans le TP. Plus d'exemples simples avec les différentes variables de l'environnement initial "env0" auraient également étés utiles pour mieux en comprendre le fonctionnement.\\
+ 
+ À la fin, certaines parties du TP sont claires pour un coéquipier, mais restent obscur pour l'autre, le TP a réellement repoussé les limites de notre compréhension de la matière du cours.\\
+ 
+ Au terme de ce travail, malgré les nombreuses frustrations, nous sommes heureux d'avoir un peu plus approfondi notre compréhension du paradigme de programmation fonctionnelle ainsi que d'avoir développé une meilleure compréhension de l'implémentation des macros.\\
+ 
+ Nous pouvons maintenant regarder de l'avant en ayant réussi le cours IFT2035, non sans quelques déboires. Bon été..!
+ \end{document}
+ 
